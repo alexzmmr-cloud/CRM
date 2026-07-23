@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import {
   LEAD_SOURCES,
   LEAD_SOURCE_LABELS,
@@ -26,23 +26,34 @@ export function LeadForm({ lead }: { lead?: LeadFormValues }) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
   const isEdit = Boolean(lead?.id);
 
   async function handleSubmit(formData: FormData) {
+    setError(null);
     startTransition(async () => {
-      if (isEdit && lead?.id) {
-        await updateLead(lead.id, formData);
+      const result =
+        isEdit && lead?.id
+          ? await updateLead(lead.id, formData)
+          : await createLead(formData);
+
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+
+      if (isEdit) {
         router.refresh();
       } else {
-        const created = await createLead(formData);
         formRef.current?.reset();
-        router.push(`/leads?leadId=${created.id}`);
+        router.push(`/leads?leadId=${result.lead.id}`);
       }
     });
   }
 
   return (
     <form ref={formRef} action={handleSubmit} className="lead-form">
+      {error && <p className="form-error">{error}</p>}
       <label>
         Имя
         <input name="name" defaultValue={lead?.name ?? ""} required />

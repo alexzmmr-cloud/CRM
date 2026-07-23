@@ -218,6 +218,7 @@ async function main() {
     oppBrandWon,
     oppExpoQualified,
     oppStroyNew,
+    oppArtLost,
   ] = opportunities;
 
   await Promise.all([
@@ -287,6 +288,31 @@ async function main() {
         opportunityId: oppStroyNew.id,
       },
     }),
+    prisma.activity.create({
+      data: {
+        type: "note",
+        content: "Сделка не состоялась, клиент выбрал другого подрядчика.",
+        opportunityId: oppArtLost.id,
+      },
+    }),
+    prisma.activity.create({
+      data: {
+        type: "task",
+        content: "Позвонить клиенту и уточнить причину отказа",
+        dueDate: daysFromNow(0),
+        done: false,
+        opportunityId: oppArtLost.id,
+      },
+    }),
+    prisma.activity.create({
+      data: {
+        type: "task",
+        content: "Обновить карточку сделки статусом отказа",
+        dueDate: daysFromNow(0),
+        done: false,
+        opportunityId: oppExpoQualified.id,
+      },
+    }),
   ]);
 
   console.log("Seed завершён:");
@@ -294,7 +320,7 @@ async function main() {
   console.log("- Accounts: 4");
   console.log("- Contacts: 5");
   console.log("- Opportunities: 6");
-  console.log("- Activities: 8");
+  console.log("- Activities: 11");
   console.log(
     `- Оставлены без сделки (для сценария convert lead): ${leadNew.name} (new), ${leadReferral.name} (new), ${leadManualDisqualified.name} (disqualified)`,
   );

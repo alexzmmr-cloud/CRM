@@ -31,8 +31,14 @@ export async function getLead(id: string) {
   });
 }
 
-export async function createLead(formData: FormData) {
-  const parsed = leadInputSchema.parse({
+export type LeadActionResult =
+  | { ok: true; lead: Awaited<ReturnType<typeof prisma.lead.create>> }
+  | { ok: false; error: string };
+
+export async function createLead(
+  formData: FormData,
+): Promise<LeadActionResult> {
+  const parsed = leadInputSchema.safeParse({
     name: formData.get("name"),
     company: formData.get("company") || undefined,
     contact: formData.get("contact") || undefined,
@@ -40,13 +46,24 @@ export async function createLead(formData: FormData) {
     source: formData.get("source"),
   });
 
-  const lead = await prisma.lead.create({ data: parsed });
-  revalidatePath("/leads");
-  return lead;
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0].message };
+  }
+
+  try {
+    const lead = await prisma.lead.create({ data: parsed.data });
+    revalidatePath("/leads");
+    return { ok: true, lead };
+  } catch {
+    return { ok: false, error: "Не удалось сохранить лида. Попробуйте ещё раз." };
+  }
 }
 
-export async function updateLead(id: string, formData: FormData) {
-  const parsed = leadUpdateSchema.parse({
+export async function updateLead(
+  id: string,
+  formData: FormData,
+): Promise<LeadActionResult> {
+  const parsed = leadUpdateSchema.safeParse({
     name: formData.get("name"),
     company: formData.get("company") || undefined,
     contact: formData.get("contact") || undefined,
@@ -55,7 +72,15 @@ export async function updateLead(id: string, formData: FormData) {
     status: formData.get("status"),
   });
 
-  const lead = await prisma.lead.update({ where: { id }, data: parsed });
-  revalidatePath("/leads");
-  return lead;
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0].message };
+  }
+
+  try {
+    const lead = await prisma.lead.update({ where: { id }, data: parsed.data });
+    revalidatePath("/leads");
+    return { ok: true, lead };
+  } catch {
+    return { ok: false, error: "Не удалось сохранить лида. Попробуйте ещё раз." };
+  }
 }
