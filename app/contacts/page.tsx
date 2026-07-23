@@ -15,7 +15,10 @@ export default async function ContactsPage({
     getContacts({ q }),
     getAccounts(),
   ]);
-  const selectedContact = contactId ? await getContact(contactId) : null;
+  const effectiveContactId = contactId ?? contacts[0]?.id ?? null;
+  const selectedContact = effectiveContactId
+    ? await getContact(effectiveContactId)
+    : null;
   const accountOptions = accounts.map((account) => ({
     id: account.id,
     name: account.name,
@@ -45,7 +48,7 @@ export default async function ContactsPage({
               <li key={contact.id}>
                 <Link
                   href={`/contacts?contactId=${contact.id}`}
-                  className={contact.id === contactId ? "active" : ""}
+                  className={contact.id === effectiveContactId ? "active" : ""}
                 >
                   <strong>{contact.name}</strong>
                   <span className="muted">
@@ -57,69 +60,67 @@ export default async function ContactsPage({
           </ul>
         </section>
 
-        <section className="lead-detail">
-          <h2>Новый контакт</h2>
-          <ContactForm accounts={accountOptions} />
-
-          {contactId && (
+        <section className="leads-detail">
+          <h2>Карточка контакта</h2>
+          {selectedContact ? (
             <>
-              <h2>Карточка контакта</h2>
-              {selectedContact ? (
-                <>
-                  <ContactForm
-                    contact={{
-                      id: selectedContact.id,
-                      name: selectedContact.name,
-                      email: selectedContact.email,
-                      phone: selectedContact.phone,
-                      role: selectedContact.role,
-                      accountId: selectedContact.accountId,
-                    }}
-                    accounts={accountOptions}
-                  />
-                  {selectedContact.account && (
-                    <p>
-                      Компания:{" "}
-                      <Link
-                        href={`/accounts?accountId=${selectedContact.account.id}`}
-                      >
-                        {selectedContact.account.name}
-                      </Link>
-                    </p>
-                  )}
-                  <p className="quick-action">
-                    <Link
-                      href={`/opportunities?prefillContactId=${selectedContact.id}${
-                        selectedContact.accountId
-                          ? `&prefillAccountId=${selectedContact.accountId}`
-                          : ""
-                      }`}
-                    >
-                      + Создать сделку для этого контакта
-                    </Link>
-                  </p>
-                  <h3>Сделки</h3>
-                  {selectedContact.opportunities.length === 0 ? (
-                    <p className="muted">Нет сделок.</p>
-                  ) : (
-                    <ul>
-                      {selectedContact.opportunities.map((opportunity) => (
-                        <li key={opportunity.id}>
-                          <Link
-                            href={`/opportunities?opportunityId=${opportunity.id}`}
-                          >
-                            {opportunity.title}
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </>
+              <ContactForm
+                contact={{
+                  id: selectedContact.id,
+                  name: selectedContact.name,
+                  email: selectedContact.email,
+                  phone: selectedContact.phone,
+                  role: selectedContact.role,
+                  accountId: selectedContact.accountId,
+                }}
+                accounts={accountOptions}
+              />
+              {selectedContact.account && (
+                <p>
+                  Компания:{" "}
+                  <Link
+                    href={`/accounts?accountId=${selectedContact.account.id}`}
+                  >
+                    {selectedContact.account.name}
+                  </Link>
+                </p>
+              )}
+              <p className="quick-action">
+                <Link
+                  href={`/opportunities?prefillContactId=${selectedContact.id}${
+                    selectedContact.accountId
+                      ? `&prefillAccountId=${selectedContact.accountId}`
+                      : ""
+                  }`}
+                >
+                  + Создать сделку для этого контакта
+                </Link>
+              </p>
+              <h3>Сделки</h3>
+              {selectedContact.opportunities.length === 0 ? (
+                <p className="muted">Нет сделок.</p>
               ) : (
-                <p>Контакт не найден.</p>
+                <ul>
+                  {selectedContact.opportunities.map((opportunity) => (
+                    <li key={opportunity.id}>
+                      <Link
+                        href={`/opportunities?opportunityId=${opportunity.id}`}
+                      >
+                        {opportunity.title}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
               )}
             </>
+          ) : (
+            <p className="muted">Нет контактов для отображения.</p>
           )}
+        </section>
+
+        <section className="leads-create">
+          <h2>Новый контакт</h2>
+          <ContactForm accounts={accountOptions} />
         </section>
       </div>
     </main>

@@ -11,7 +11,10 @@ export default async function AccountsPage({
 }) {
   const { accountId, q } = await searchParams;
   const accounts = await getAccounts({ q });
-  const selectedAccount = accountId ? await getAccount(accountId) : null;
+  const effectiveAccountId = accountId ?? accounts[0]?.id ?? null;
+  const selectedAccount = effectiveAccountId
+    ? await getAccount(effectiveAccountId)
+    : null;
 
   return (
     <main className="leads-page">
@@ -37,7 +40,7 @@ export default async function AccountsPage({
               <li key={account.id}>
                 <Link
                   href={`/accounts?accountId=${account.id}`}
-                  className={account.id === accountId ? "active" : ""}
+                  className={account.id === effectiveAccountId ? "active" : ""}
                 >
                   <strong>{account.name}</strong>
                   <span className="muted">
@@ -50,65 +53,63 @@ export default async function AccountsPage({
           </ul>
         </section>
 
-        <section className="lead-detail">
-          <h2>Новая компания</h2>
-          <AccountForm />
-
-          {accountId && (
+        <section className="leads-detail">
+          <h2>Карточка компании</h2>
+          {selectedAccount ? (
             <>
-              <h2>Карточка компании</h2>
-              {selectedAccount ? (
-                <>
-                  <AccountForm
-                    account={{
-                      id: selectedAccount.id,
-                      name: selectedAccount.name,
-                      website: selectedAccount.website,
-                    }}
-                  />
-                  <p className="quick-action">
-                    <Link
-                      href={`/opportunities?prefillAccountId=${selectedAccount.id}`}
-                    >
-                      + Создать сделку для этой компании
-                    </Link>
-                  </p>
-                  <h3>Контакты</h3>
-                  {selectedAccount.contacts.length === 0 ? (
-                    <p className="muted">Нет привязанных контактов.</p>
-                  ) : (
-                    <ul>
-                      {selectedAccount.contacts.map((contact) => (
-                        <li key={contact.id}>
-                          <Link href={`/contacts?contactId=${contact.id}`}>
-                            {contact.name}
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  <h3>Сделки</h3>
-                  {selectedAccount.opportunities.length === 0 ? (
-                    <p className="muted">Нет сделок.</p>
-                  ) : (
-                    <ul>
-                      {selectedAccount.opportunities.map((opportunity) => (
-                        <li key={opportunity.id}>
-                          <Link
-                            href={`/opportunities?opportunityId=${opportunity.id}`}
-                          >
-                            {opportunity.title}
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </>
+              <AccountForm
+                account={{
+                  id: selectedAccount.id,
+                  name: selectedAccount.name,
+                  website: selectedAccount.website,
+                }}
+              />
+              <p className="quick-action">
+                <Link
+                  href={`/opportunities?prefillAccountId=${selectedAccount.id}`}
+                >
+                  + Создать сделку для этой компании
+                </Link>
+              </p>
+              <h3>Контакты</h3>
+              {selectedAccount.contacts.length === 0 ? (
+                <p className="muted">Нет привязанных контактов.</p>
               ) : (
-                <p>Компания не найдена.</p>
+                <ul>
+                  {selectedAccount.contacts.map((contact) => (
+                    <li key={contact.id}>
+                      <Link href={`/contacts?contactId=${contact.id}`}>
+                        {contact.name}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <h3>Сделки</h3>
+              {selectedAccount.opportunities.length === 0 ? (
+                <p className="muted">Нет сделок.</p>
+              ) : (
+                <ul>
+                  {selectedAccount.opportunities.map((opportunity) => (
+                    <li key={opportunity.id}>
+                      <Link
+                        href={`/opportunities?opportunityId=${opportunity.id}`}
+                      >
+                        {opportunity.title}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
               )}
             </>
+          ) : (
+            <p className="muted">Нет компаний для отображения.</p>
           )}
+        </section>
+
+        <section className="leads-create">
+          <h2>Новая компания</h2>
+          <AccountForm />
         </section>
       </div>
     </main>

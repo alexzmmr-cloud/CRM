@@ -25,7 +25,8 @@ export default async function LeadsPage({
 }) {
   const { leadId, q, source, status } = await searchParams;
   const leads = await getLeads({ q, source, status });
-  const selectedLead = leadId ? await getLead(leadId) : null;
+  const effectiveLeadId = leadId ?? leads[0]?.id ?? null;
+  const selectedLead = effectiveLeadId ? await getLead(effectiveLeadId) : null;
 
   return (
     <main className="leads-page">
@@ -49,7 +50,7 @@ export default async function LeadsPage({
                 <li key={lead.id}>
                   <Link
                     href={`/leads?leadId=${lead.id}`}
-                    className={lead.id === leadId ? "active" : ""}
+                    className={lead.id === effectiveLeadId ? "active" : ""}
                   >
                     <strong>{lead.name}</strong>
                     <span className={LEAD_STATUS_BADGE_CLASSES[leadStatus]}>
@@ -65,50 +66,48 @@ export default async function LeadsPage({
           </ul>
         </section>
 
-        <section className="lead-detail">
-          <h2>Новый лид</h2>
-          <LeadForm />
-
-          {leadId && (
+        <section className="leads-detail">
+          <h2>Карточка лида</h2>
+          {selectedLead ? (
             <>
-              <h2>Карточка лида</h2>
-              {selectedLead ? (
-                <>
-                  <LeadForm
-                    lead={{
-                      id: selectedLead.id,
-                      name: selectedLead.name,
-                      company: selectedLead.company,
-                      contact: selectedLead.contact,
-                      note: selectedLead.note,
-                      source: isLeadSource(selectedLead.source)
-                        ? selectedLead.source
-                        : undefined,
-                      status: isLeadStatus(selectedLead.status)
-                        ? selectedLead.status
-                        : undefined,
-                    }}
-                  />
-                  {selectedLead.opportunity ? (
-                    <p>
-                      Связанная сделка:{" "}
-                      <Link
-                        href={`/opportunities?opportunityId=${selectedLead.opportunity.id}`}
-                      >
-                        {selectedLead.opportunity.title}
-                      </Link>
-                    </p>
-                  ) : (
-                    selectedLead.status !== "disqualified" && (
-                      <ConvertLeadButton leadId={selectedLead.id} />
-                    )
-                  )}
-                </>
+              <LeadForm
+                lead={{
+                  id: selectedLead.id,
+                  name: selectedLead.name,
+                  company: selectedLead.company,
+                  contact: selectedLead.contact,
+                  note: selectedLead.note,
+                  source: isLeadSource(selectedLead.source)
+                    ? selectedLead.source
+                    : undefined,
+                  status: isLeadStatus(selectedLead.status)
+                    ? selectedLead.status
+                    : undefined,
+                }}
+              />
+              {selectedLead.opportunity ? (
+                <p>
+                  Связанная сделка:{" "}
+                  <Link
+                    href={`/opportunities?opportunityId=${selectedLead.opportunity.id}`}
+                  >
+                    {selectedLead.opportunity.title}
+                  </Link>
+                </p>
               ) : (
-                <p>Лид не найден.</p>
+                selectedLead.status !== "disqualified" && (
+                  <ConvertLeadButton leadId={selectedLead.id} />
+                )
               )}
             </>
+          ) : (
+            <p className="muted">Нет лидов для отображения.</p>
           )}
+        </section>
+
+        <section className="leads-create">
+          <h2>Новый лид</h2>
+          <LeadForm />
         </section>
       </div>
     </main>

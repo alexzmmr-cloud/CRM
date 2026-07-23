@@ -44,8 +44,9 @@ export default async function OpportunitiesPage({
     getAccounts(),
     getContacts(),
   ]);
-  const selectedOpportunity = opportunityId
-    ? await getOpportunity(opportunityId)
+  const effectiveOpportunityId = opportunityId ?? opportunities[0]?.id ?? null;
+  const selectedOpportunity = effectiveOpportunityId
+    ? await getOpportunity(effectiveOpportunityId)
     : null;
 
   const accountOptions = accounts.map((account) => ({
@@ -77,7 +78,7 @@ export default async function OpportunitiesPage({
                   <Link
                     href={`/opportunities?opportunityId=${opportunity.id}`}
                     className={
-                      opportunity.id === opportunityId ? "active" : ""
+                      opportunity.id === effectiveOpportunityId ? "active" : ""
                     }
                   >
                     <strong>{opportunity.title}</strong>
@@ -95,7 +96,77 @@ export default async function OpportunitiesPage({
           </ul>
         </section>
 
-        <section className="lead-detail">
+        <section className="leads-detail">
+          <h2>Карточка сделки</h2>
+          {selectedOpportunity ? (
+            <>
+              <StageControl
+                opportunityId={selectedOpportunity.id}
+                stage={
+                  isOpportunityStage(selectedOpportunity.stage)
+                    ? selectedOpportunity.stage
+                    : "new"
+                }
+              />
+              <OpportunityForm
+                opportunity={{
+                  id: selectedOpportunity.id,
+                  title: selectedOpportunity.title,
+                  amount: selectedOpportunity.amount
+                    ? Number(selectedOpportunity.amount)
+                    : null,
+                  venue: selectedOpportunity.venue,
+                  timeline: selectedOpportunity.timeline,
+                  format: selectedOpportunity.format,
+                  accountId: selectedOpportunity.accountId,
+                  contactId: selectedOpportunity.contactId,
+                  stage: isOpportunityStage(selectedOpportunity.stage)
+                    ? selectedOpportunity.stage
+                    : undefined,
+                }}
+                accounts={accountOptions}
+                contacts={contactOptions}
+              />
+              {selectedOpportunity.account && (
+                <p>
+                  Компания:{" "}
+                  <Link
+                    href={`/accounts?accountId=${selectedOpportunity.account.id}`}
+                  >
+                    {selectedOpportunity.account.name}
+                  </Link>
+                </p>
+              )}
+              {selectedOpportunity.contact && (
+                <p>
+                  Контакт:{" "}
+                  <Link
+                    href={`/contacts?contactId=${selectedOpportunity.contact.id}`}
+                  >
+                    {selectedOpportunity.contact.name}
+                  </Link>
+                </p>
+              )}
+              {selectedOpportunity.lead && (
+                <p>
+                  Исходный лид:{" "}
+                  <Link href={`/leads?leadId=${selectedOpportunity.lead.id}`}>
+                    {selectedOpportunity.lead.name}
+                  </Link>
+                </p>
+              )}
+              <h3>Активности</h3>
+              <ActivityPanel
+                opportunityId={selectedOpportunity.id}
+                activities={selectedOpportunity.activities}
+              />
+            </>
+          ) : (
+            <p className="muted">Нет сделок для отображения.</p>
+          )}
+        </section>
+
+        <section className="leads-create">
           <h2>Новая сделка</h2>
           <OpportunityForm
             opportunity={
@@ -106,80 +177,6 @@ export default async function OpportunitiesPage({
             accounts={accountOptions}
             contacts={contactOptions}
           />
-
-          {opportunityId && (
-            <>
-              <h2>Карточка сделки</h2>
-              {selectedOpportunity ? (
-                <>
-                  <StageControl
-                    opportunityId={selectedOpportunity.id}
-                    stage={
-                      isOpportunityStage(selectedOpportunity.stage)
-                        ? selectedOpportunity.stage
-                        : "new"
-                    }
-                  />
-                  <OpportunityForm
-                    opportunity={{
-                      id: selectedOpportunity.id,
-                      title: selectedOpportunity.title,
-                      amount: selectedOpportunity.amount
-                        ? Number(selectedOpportunity.amount)
-                        : null,
-                      venue: selectedOpportunity.venue,
-                      timeline: selectedOpportunity.timeline,
-                      format: selectedOpportunity.format,
-                      accountId: selectedOpportunity.accountId,
-                      contactId: selectedOpportunity.contactId,
-                      stage: isOpportunityStage(selectedOpportunity.stage)
-                        ? selectedOpportunity.stage
-                        : undefined,
-                    }}
-                    accounts={accountOptions}
-                    contacts={contactOptions}
-                  />
-                  {selectedOpportunity.account && (
-                    <p>
-                      Компания:{" "}
-                      <Link
-                        href={`/accounts?accountId=${selectedOpportunity.account.id}`}
-                      >
-                        {selectedOpportunity.account.name}
-                      </Link>
-                    </p>
-                  )}
-                  {selectedOpportunity.contact && (
-                    <p>
-                      Контакт:{" "}
-                      <Link
-                        href={`/contacts?contactId=${selectedOpportunity.contact.id}`}
-                      >
-                        {selectedOpportunity.contact.name}
-                      </Link>
-                    </p>
-                  )}
-                  {selectedOpportunity.lead && (
-                    <p>
-                      Исходный лид:{" "}
-                      <Link
-                        href={`/leads?leadId=${selectedOpportunity.lead.id}`}
-                      >
-                        {selectedOpportunity.lead.name}
-                      </Link>
-                    </p>
-                  )}
-                  <h3>Активности</h3>
-                  <ActivityPanel
-                    opportunityId={selectedOpportunity.id}
-                    activities={selectedOpportunity.activities}
-                  />
-                </>
-              ) : (
-                <p>Сделка не найдена.</p>
-              )}
-            </>
-          )}
         </section>
       </div>
     </main>
