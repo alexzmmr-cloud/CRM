@@ -8,6 +8,7 @@ export default function Home() {
         <Link href="/leads">Лиды</Link>
         <Link href="/accounts">Компании</Link>
         <Link href="/contacts">Контакты</Link>
+        <Link href="/opportunities">Сделки</Link>
       </nav>
     </main>
   );
