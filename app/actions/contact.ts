@@ -12,8 +12,14 @@ const contactInputSchema = z.object({
   accountId: z.string().trim().optional(),
 });
 
-export async function getContacts() {
+export type ContactFilters = {
+  q?: string;
+};
+
+export async function getContacts(filters: ContactFilters = {}) {
+  const { q } = filters;
   return prisma.contact.findMany({
+    where: q ? { name: { contains: q, mode: "insensitive" } } : {},
     orderBy: { createdAt: "desc" },
     include: { account: true },
   });

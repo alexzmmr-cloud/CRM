@@ -8,11 +8,11 @@ export const dynamic = "force-dynamic";
 export default async function ContactsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ contactId?: string }>;
+  searchParams: Promise<{ contactId?: string; q?: string }>;
 }) {
-  const { contactId } = await searchParams;
+  const { contactId, q } = await searchParams;
   const [contacts, accounts] = await Promise.all([
-    getContacts(),
+    getContacts({ q }),
     getAccounts(),
   ]);
   const selectedContact = contactId ? await getContact(contactId) : null;
@@ -27,6 +27,19 @@ export default async function ContactsPage({
       <div className="leads-layout">
         <section className="leads-list">
           <h2>Список контактов</h2>
+          <form className="filters" method="get">
+            <input
+              type="search"
+              name="q"
+              placeholder="Поиск по имени"
+              defaultValue={q ?? ""}
+            />
+            <button type="submit">Применить</button>
+            {q && <a href="/contacts">Сбросить</a>}
+          </form>
+          {contacts.length === 0 && (
+            <p className="muted">Ничего не найдено по заданным условиям.</p>
+          )}
           <ul>
             {contacts.map((contact) => (
               <li key={contact.id}>

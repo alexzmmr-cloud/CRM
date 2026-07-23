@@ -9,8 +9,14 @@ const accountInputSchema = z.object({
   website: z.string().trim().optional(),
 });
 
-export async function getAccounts() {
+export type AccountFilters = {
+  q?: string;
+};
+
+export async function getAccounts(filters: AccountFilters = {}) {
+  const { q } = filters;
   return prisma.account.findMany({
+    where: q ? { name: { contains: q, mode: "insensitive" } } : {},
     orderBy: { createdAt: "desc" },
     include: { contacts: true, opportunities: true },
   });

@@ -17,8 +17,29 @@ const leadUpdateSchema = leadInputSchema.extend({
   status: z.enum(LEAD_STATUSES),
 });
 
-export async function getLeads() {
+export type LeadFilters = {
+  q?: string;
+  source?: string;
+  status?: string;
+};
+
+export async function getLeads(filters: LeadFilters = {}) {
+  const { q, source, status } = filters;
   return prisma.lead.findMany({
+    where: {
+      AND: [
+        q
+          ? {
+              OR: [
+                { name: { contains: q, mode: "insensitive" } },
+                { company: { contains: q, mode: "insensitive" } },
+              ],
+            }
+          : {},
+        source ? { source } : {},
+        status ? { status } : {},
+      ],
+    },
     orderBy: { createdAt: "desc" },
     include: { opportunity: true },
   });

@@ -92,6 +92,36 @@ nav a {
   background: rgba(0, 0, 0, 0.04);
 }
 
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.filters input,
+.filters select {
+  padding: 6px 8px;
+  border: 1px solid #b0b0b0;
+  border-radius: 6px;
+  font: inherit;
+}
+
+.filters button {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  background: #171717;
+  color: #fff;
+  cursor: pointer;
+}
+
+.filters a {
+  font-size: 13px;
+  text-decoration: underline;
+}
+
 .lead-form {
   display: flex;
   flex-direction: column;

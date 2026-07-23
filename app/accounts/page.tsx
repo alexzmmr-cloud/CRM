@@ -7,10 +7,10 @@ export const dynamic = "force-dynamic";
 export default async function AccountsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ accountId?: string }>;
+  searchParams: Promise<{ accountId?: string; q?: string }>;
 }) {
-  const { accountId } = await searchParams;
-  const accounts = await getAccounts();
+  const { accountId, q } = await searchParams;
+  const accounts = await getAccounts({ q });
   const selectedAccount = accountId ? await getAccount(accountId) : null;
 
   return (
@@ -19,6 +19,19 @@ export default async function AccountsPage({
       <div className="leads-layout">
         <section className="leads-list">
           <h2>Список компаний</h2>
+          <form className="filters" method="get">
+            <input
+              type="search"
+              name="q"
+              placeholder="Поиск по названию"
+              defaultValue={q ?? ""}
+            />
+            <button type="submit">Применить</button>
+            {q && <a href="/accounts">Сбросить</a>}
+          </form>
+          {accounts.length === 0 && (
+            <p className="muted">Ничего не найдено по заданным условиям.</p>
+          )}
           <ul>
             {accounts.map((account) => (
               <li key={account.id}>

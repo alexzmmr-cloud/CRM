@@ -8,6 +8,7 @@ import {
   isOpportunityStage,
 } from "@/lib/opportunity";
 import { OpportunityForm } from "./opportunity-form";
+import { OpportunityFilters } from "./opportunity-filters";
 
 export const dynamic = "force-dynamic";
 
@@ -21,11 +22,11 @@ function formatAmount(amount: unknown): string {
 export default async function OpportunitiesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ opportunityId?: string }>;
+  searchParams: Promise<{ opportunityId?: string; q?: string; stage?: string }>;
 }) {
-  const { opportunityId } = await searchParams;
+  const { opportunityId, q, stage: stageFilter } = await searchParams;
   const [opportunities, accounts, contacts] = await Promise.all([
-    getOpportunities(),
+    getOpportunities({ q, stage: stageFilter }),
     getAccounts(),
     getContacts(),
   ]);
@@ -48,6 +49,10 @@ export default async function OpportunitiesPage({
       <div className="leads-layout">
         <section className="leads-list">
           <h2>Список сделок</h2>
+          <OpportunityFilters q={q} stage={stageFilter} />
+          {opportunities.length === 0 && (
+            <p className="muted">Ничего не найдено по заданным условиям.</p>
+          )}
           <ul>
             {opportunities.map((opportunity) => {
               const stage = isOpportunityStage(opportunity.stage)

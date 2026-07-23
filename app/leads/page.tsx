@@ -8,16 +8,22 @@ import {
   isLeadStatus,
 } from "@/lib/lead";
 import { LeadForm } from "./lead-form";
+import { LeadFilters } from "./lead-filters";
 
 export const dynamic = "force-dynamic";
 
 export default async function LeadsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ leadId?: string }>;
+  searchParams: Promise<{
+    leadId?: string;
+    q?: string;
+    source?: string;
+    status?: string;
+  }>;
 }) {
-  const { leadId } = await searchParams;
-  const leads = await getLeads();
+  const { leadId, q, source, status } = await searchParams;
+  const leads = await getLeads({ q, source, status });
   const selectedLead = leadId ? await getLead(leadId) : null;
 
   return (
@@ -26,10 +32,18 @@ export default async function LeadsPage({
       <div className="leads-layout">
         <section className="leads-list">
           <h2>Список лидов</h2>
+          <LeadFilters q={q} source={source} status={status} />
+          {leads.length === 0 && (
+            <p className="muted">Ничего не найдено по заданным условиям.</p>
+          )}
           <ul>
             {leads.map((lead) => {
-              const status = isLeadStatus(lead.status) ? lead.status : "new";
-              const source = isLeadSource(lead.source) ? lead.source : null;
+              const leadStatus = isLeadStatus(lead.status)
+                ? lead.status
+                : "new";
+              const leadSource = isLeadSource(lead.source)
+                ? lead.source
+                : null;
               return (
                 <li key={lead.id}>
                   <Link
@@ -37,11 +51,11 @@ export default async function LeadsPage({
                     className={lead.id === leadId ? "active" : ""}
                   >
                     <strong>{lead.name}</strong>
-                    <span className={LEAD_STATUS_BADGE_CLASSES[status]}>
-                      {LEAD_STATUS_LABELS[status]}
+                    <span className={LEAD_STATUS_BADGE_CLASSES[leadStatus]}>
+                      {LEAD_STATUS_LABELS[leadStatus]}
                     </span>
                     <span className="muted">
-                      {source ? LEAD_SOURCE_LABELS[source] : lead.source}
+                      {leadSource ? LEAD_SOURCE_LABELS[leadSource] : lead.source}
                     </span>
                   </Link>
                 </li>

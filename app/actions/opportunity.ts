@@ -26,8 +26,20 @@ const opportunityUpdateSchema = opportunityInputSchema.extend({
   stage: z.enum(OPPORTUNITY_STAGES),
 });
 
-export async function getOpportunities() {
+export type OpportunityFilters = {
+  q?: string;
+  stage?: string;
+};
+
+export async function getOpportunities(filters: OpportunityFilters = {}) {
+  const { q, stage } = filters;
   return prisma.opportunity.findMany({
+    where: {
+      AND: [
+        q ? { title: { contains: q, mode: "insensitive" } } : {},
+        stage ? { stage } : {},
+      ],
+    },
     orderBy: { createdAt: "desc" },
     include: { account: true, contact: true, lead: true },
   });
