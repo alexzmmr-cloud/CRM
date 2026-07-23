@@ -158,6 +158,25 @@ nav a {
   cursor: pointer;
 }
 
+.activity-panel ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.task-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.task-item .done {
+  text-decoration: line-through;
+  color: #6b7280;
+}
+
 .convert-lead button:disabled {
   opacity: 0.6;
   cursor: not-allowed;

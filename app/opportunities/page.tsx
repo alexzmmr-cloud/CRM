@@ -10,6 +10,7 @@ import {
 import { OpportunityForm } from "./opportunity-form";
 import { OpportunityFilters } from "./opportunity-filters";
 import { StageControl } from "./stage-control";
+import { ActivityPanel } from "./activity-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -149,25 +150,10 @@ export default async function OpportunitiesPage({
                     </p>
                   )}
                   <h3>Активности</h3>
-                  {selectedOpportunity.activities.length === 0 ? (
-                    <p className="muted">Пока нет заметок и задач.</p>
-                  ) : (
-                    <ul>
-                      {selectedOpportunity.activities.map((activity) => (
-                        <li key={activity.id}>
-                          {activity.type === "task" ? "Задача" : "Заметка"}:{" "}
-                          {activity.content}
-                          {activity.type === "task" && activity.dueDate && (
-                            <span className="muted">
-                              {" "}
-                              (до {activity.dueDate.toLocaleDateString("ru-RU")}
-                              {activity.done ? ", выполнено" : ""})
-                            </span>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                  <ActivityPanel
+                    opportunityId={selectedOpportunity.id}
+                    activities={selectedOpportunity.activities}
+                  />
                 </>
               ) : (
                 <p>Сделка не найдена.</p>
