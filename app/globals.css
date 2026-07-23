@@ -130,6 +130,25 @@ nav a {
   max-width: 420px;
 }
 
+.stage-control {
+  margin-bottom: 16px;
+}
+
+.stage-control label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+  max-width: 240px;
+}
+
+.stage-control select {
+  padding: 8px 10px;
+  border: 1px solid #b0b0b0;
+  border-radius: 6px;
+  font: inherit;
+}
+
 .convert-lead button {
   padding: 8px 16px;
   border: none;

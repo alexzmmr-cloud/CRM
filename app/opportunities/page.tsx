@@ -9,6 +9,7 @@ import {
 } from "@/lib/opportunity";
 import { OpportunityForm } from "./opportunity-form";
 import { OpportunityFilters } from "./opportunity-filters";
+import { StageControl } from "./stage-control";
 
 export const dynamic = "force-dynamic";
 
@@ -90,6 +91,14 @@ export default async function OpportunitiesPage({
               <h2>Карточка сделки</h2>
               {selectedOpportunity ? (
                 <>
+                  <StageControl
+                    opportunityId={selectedOpportunity.id}
+                    stage={
+                      isOpportunityStage(selectedOpportunity.stage)
+                        ? selectedOpportunity.stage
+                        : "new"
+                    }
+                  />
                   <OpportunityForm
                     opportunity={{
                       id: selectedOpportunity.id,
