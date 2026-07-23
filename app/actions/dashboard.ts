@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { OPEN_OPPORTUNITY_STAGES } from "@/lib/opportunity";
+import { OPEN_OPPORTUNITY_STAGES, OPPORTUNITY_STAGES } from "@/lib/opportunity";
 import { LEAD_SOURCES, LEAD_STATUSES } from "@/lib/lead";
 
 export async function getDashboardKpis() {
@@ -49,4 +49,34 @@ export async function getDashboardKpis() {
     leadsByStatus,
     leadsBySource,
   };
+}
+
+export async function getOpportunitiesByStage() {
+  const rows = await prisma.opportunity.groupBy({
+    by: ["stage"],
+    _count: { _all: true },
+  });
+
+  return Object.fromEntries(
+    OPPORTUNITY_STAGES.map((stage) => [
+      stage,
+      rows.find((row) => row.stage === stage)?._count._all ?? 0,
+    ]),
+  ) as Record<(typeof OPPORTUNITY_STAGES)[number], number>;
+}
+
+export async function getRecentLeads(limit = 5) {
+  return prisma.lead.findMany({
+    orderBy: { createdAt: "desc" },
+    take: limit,
+  });
+}
+
+export async function getOverdueTasks(limit = 5) {
+  return prisma.activity.findMany({
+    where: { type: "task", done: false, dueDate: { lt: new Date() } },
+    orderBy: { dueDate: "asc" },
+    take: limit,
+    include: { opportunity: true },
+  });
 }
