@@ -19,18 +19,40 @@ export function StageControl({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [pendingLostReason, setPendingLostReason] = useState(false);
+  const [lostReason, setLostReason] = useState("");
 
-  function handleChange(event: React.ChangeEvent<HTMLSelectElement>) {
-    const nextStage = event.target.value;
+  function submitStage(nextStage: string, reason?: string) {
     setError(null);
     startTransition(async () => {
-      const result = await updateOpportunityStage(opportunityId, nextStage);
+      const result = await updateOpportunityStage(
+        opportunityId,
+        nextStage,
+        reason,
+      );
       if (!result.ok) {
         setError(result.error);
         return;
       }
+      setPendingLostReason(false);
+      setLostReason("");
       router.refresh();
     });
+  }
+
+  function handleChange(event: React.ChangeEvent<HTMLSelectElement>) {
+    const nextStage = event.target.value;
+    if (nextStage === "lost") {
+      setError(null);
+      setPendingLostReason(true);
+      return;
+    }
+    submitStage(nextStage);
+  }
+
+  function handleConfirmLostReason(event: React.FormEvent) {
+    event.preventDefault();
+    submitStage("lost", lostReason);
   }
 
   return (
@@ -46,6 +68,32 @@ export function StageControl({
           ))}
         </select>
       </label>
+      {pendingLostReason && (
+        <form onSubmit={handleConfirmLostReason} className="stage-lost-reason">
+          <label>
+            Причина расторжения
+            <input
+              value={lostReason}
+              onChange={(event) => setLostReason(event.target.value)}
+              autoFocus
+              required
+            />
+          </label>
+          <button type="submit" disabled={isPending}>
+            Подтвердить переход в «Проиграна»
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setPendingLostReason(false);
+              setLostReason("");
+            }}
+            disabled={isPending}
+          >
+            Отмена
+          </button>
+        </form>
+      )}
     </div>
   );
 }

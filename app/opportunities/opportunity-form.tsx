@@ -37,6 +37,9 @@ export function OpportunityForm({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const isEdit = Boolean(opportunity?.id);
+  const [selectedStage, setSelectedStage] = useState<OpportunityStage>(
+    opportunity?.stage ?? "new",
+  );
 
   async function handleSubmit(formData: FormData) {
     setError(null);
@@ -113,13 +116,25 @@ export function OpportunityForm({
       {isEdit && (
         <label>
           Стадия
-          <select name="stage" defaultValue={opportunity?.stage ?? "new"}>
+          <select
+            name="stage"
+            value={selectedStage}
+            onChange={(event) =>
+              setSelectedStage(event.target.value as OpportunityStage)
+            }
+          >
             {OPPORTUNITY_STAGES.map((stage) => (
               <option key={stage} value={stage}>
                 {OPPORTUNITY_STAGE_LABELS[stage]}
               </option>
             ))}
           </select>
+        </label>
+      )}
+      {isEdit && selectedStage === "lost" && (
+        <label>
+          Причина расторжения
+          <input name="lostReason" required />
         </label>
       )}
       <button type="submit" disabled={isPending}>

@@ -24,6 +24,7 @@ const opportunityInputSchema = z.object({
 
 const opportunityUpdateSchema = opportunityInputSchema.extend({
   stage: z.enum(OPPORTUNITY_STAGES),
+  lostReason: z.string().trim().optional(),
 });
 
 export type OpportunityFilters = {
@@ -106,16 +107,57 @@ export async function updateOpportunity(
     accountId: formData.get("accountId") || undefined,
     contactId: formData.get("contactId") || undefined,
     stage: formData.get("stage"),
+    lostReason: formData.get("lostReason") || undefined,
   });
 
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0].message };
   }
 
+  const { lostReason, ...data } = parsed.data;
+
+  const current = await prisma.opportunity.findUnique({ where: { id } });
+  if (!current) {
+    return { ok: false, error: "Сделка не найдена" };
+  }
+  const isEnteringStage = current.stage !== data.stage;
+
+  if (
+    isEnteringStage &&
+    data.stage === "won" &&
+    (data.amount === undefined || !data.contactId)
+  ) {
+    return {
+      ok: false,
+      error:
+        "Для перехода в «Выиграна» нужно заполнить бюджет и указать контакт",
+    };
+  }
+
+  const trimmedReason = lostReason?.trim();
+  if (isEnteringStage && data.stage === "lost" && !trimmedReason) {
+    return {
+      ok: false,
+      error: "Для перехода в «Проиграна» укажите причину расторжения",
+    };
+  }
+
   try {
-    const opportunity = await prisma.opportunity.update({
-      where: { id },
-      data: parsed.data,
+    const opportunity = await prisma.$transaction(async (tx) => {
+      const updated = await tx.opportunity.update({
+        where: { id },
+        data,
+      });
+      if (isEnteringStage && data.stage === "lost" && trimmedReason) {
+        await tx.activity.create({
+          data: {
+            type: "note",
+            content: `Причина расторжения: ${trimmedReason}`,
+            opportunityId: id,
+          },
+        });
+      }
+      return updated;
     });
     revalidatePath("/opportunities");
     return { ok: true, opportunity };
@@ -127,14 +169,57 @@ export async function updateOpportunity(
   }
 }
 
-export async function updateOpportunityStage(id: string, stage: string) {
+export async function updateOpportunityStage(
+  id: string,
+  stage: string,
+  lostReason?: string,
+) {
   if (!OPPORTUNITY_STAGES.includes(stage as (typeof OPPORTUNITY_STAGES)[number])) {
     return { ok: false as const, error: "Недопустимая стадия сделки" };
   }
+
+  const current = await prisma.opportunity.findUnique({ where: { id } });
+  if (!current) {
+    return { ok: false as const, error: "Сделка не найдена" };
+  }
+  const isEnteringStage = current.stage !== stage;
+
+  if (
+    isEnteringStage &&
+    stage === "won" &&
+    (current.amount === null || !current.contactId)
+  ) {
+    return {
+      ok: false as const,
+      error:
+        "Для перехода в «Выиграна» нужно заполнить бюджет и указать контакт",
+    };
+  }
+
+  const trimmedReason = lostReason?.trim();
+  if (isEnteringStage && stage === "lost" && !trimmedReason) {
+    return {
+      ok: false as const,
+      error: "Для перехода в «Проиграна» укажите причину расторжения",
+    };
+  }
+
   try {
-    const opportunity = await prisma.opportunity.update({
-      where: { id },
-      data: { stage },
+    const opportunity = await prisma.$transaction(async (tx) => {
+      const updated = await tx.opportunity.update({
+        where: { id },
+        data: { stage },
+      });
+      if (isEnteringStage && stage === "lost" && trimmedReason) {
+        await tx.activity.create({
+          data: {
+            type: "note",
+            content: `Причина расторжения: ${trimmedReason}`,
+            opportunityId: id,
+          },
+        });
+      }
+      return updated;
     });
     revalidatePath("/opportunities");
     return { ok: true as const, opportunity };
