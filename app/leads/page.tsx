@@ -9,6 +9,7 @@ import {
 } from "@/lib/lead";
 import { LeadForm } from "./lead-form";
 import { LeadFilters } from "./lead-filters";
+import { ConvertLeadButton } from "./convert-lead-button";
 
 export const dynamic = "force-dynamic";
 
@@ -88,7 +89,7 @@ export default async function LeadsPage({
                         : undefined,
                     }}
                   />
-                  {selectedLead.opportunity && (
+                  {selectedLead.opportunity ? (
                     <p>
                       Связанная сделка:{" "}
                       <Link
@@ -97,6 +98,10 @@ export default async function LeadsPage({
                         {selectedLead.opportunity.title}
                       </Link>
                     </p>
+                  ) : (
+                    selectedLead.status !== "disqualified" && (
+                      <ConvertLeadButton leadId={selectedLead.id} />
+                    )
                   )}
                 </>
               ) : (

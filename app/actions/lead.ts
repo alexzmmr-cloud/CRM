@@ -52,6 +52,71 @@ export async function getLead(id: string) {
   });
 }
 
+export type ConvertLeadResult =
+  | {
+      ok: true;
+      opportunity: Awaited<ReturnType<typeof prisma.opportunity.create>>;
+    }
+  | { ok: false; error: string };
+
+export async function convertLead(id: string): Promise<ConvertLeadResult> {
+  const lead = await prisma.lead.findUnique({
+    where: { id },
+    include: { opportunity: true },
+  });
+
+  if (!lead) {
+    return { ok: false, error: "Лид не найден." };
+  }
+
+  if (lead.status === "converted" && lead.opportunity) {
+    return { ok: true, opportunity: lead.opportunity };
+  }
+
+  const contactValue = lead.contact?.trim();
+  const isEmail = contactValue?.includes("@") ?? false;
+
+  try {
+    const opportunity = await prisma.$transaction(async (tx) => {
+      const account = await tx.account.create({
+        data: { name: lead.company?.trim() || lead.name },
+      });
+      const contact = await tx.contact.create({
+        data: {
+          name: lead.name,
+          email: isEmail ? contactValue : undefined,
+          phone: !isEmail ? contactValue : undefined,
+          accountId: account.id,
+        },
+      });
+      const createdOpportunity = await tx.opportunity.create({
+        data: {
+          title: `Сделка: ${lead.name}`,
+          accountId: account.id,
+          contactId: contact.id,
+          leadId: lead.id,
+        },
+      });
+      await tx.lead.update({
+        where: { id: lead.id },
+        data: { status: "converted" },
+      });
+      return createdOpportunity;
+    });
+
+    revalidatePath("/leads");
+    revalidatePath("/accounts");
+    revalidatePath("/contacts");
+    revalidatePath("/opportunities");
+    return { ok: true, opportunity };
+  } catch {
+    return {
+      ok: false,
+      error: "Не удалось конвертировать лида. Попробуйте ещё раз.",
+    };
+  }
+}
+
 export type LeadActionResult =
   | { ok: true; lead: Awaited<ReturnType<typeof prisma.lead.create>> }
   | { ok: false; error: string };
