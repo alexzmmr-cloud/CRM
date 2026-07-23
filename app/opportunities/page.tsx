@@ -24,9 +24,21 @@ function formatAmount(amount: unknown): string {
 export default async function OpportunitiesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ opportunityId?: string; q?: string; stage?: string }>;
+  searchParams: Promise<{
+    opportunityId?: string;
+    q?: string;
+    stage?: string;
+    prefillAccountId?: string;
+    prefillContactId?: string;
+  }>;
 }) {
-  const { opportunityId, q, stage: stageFilter } = await searchParams;
+  const {
+    opportunityId,
+    q,
+    stage: stageFilter,
+    prefillAccountId,
+    prefillContactId,
+  } = await searchParams;
   const [opportunities, accounts, contacts] = await Promise.all([
     getOpportunities({ q, stage: stageFilter }),
     getAccounts(),
@@ -85,7 +97,15 @@ export default async function OpportunitiesPage({
 
         <section className="lead-detail">
           <h2>Новая сделка</h2>
-          <OpportunityForm accounts={accountOptions} contacts={contactOptions} />
+          <OpportunityForm
+            opportunity={
+              prefillAccountId || prefillContactId
+                ? { accountId: prefillAccountId, contactId: prefillContactId }
+                : undefined
+            }
+            accounts={accountOptions}
+            contacts={contactOptions}
+          />
 
           {opportunityId && (
             <>

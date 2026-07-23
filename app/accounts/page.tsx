@@ -66,6 +66,13 @@ export default async function AccountsPage({
                       website: selectedAccount.website,
                     }}
                   />
+                  <p className="quick-action">
+                    <Link
+                      href={`/opportunities?prefillAccountId=${selectedAccount.id}`}
+                    >
+                      + Создать сделку для этой компании
+                    </Link>
+                  </p>
                   <h3>Контакты</h3>
                   {selectedAccount.contacts.length === 0 ? (
                     <p className="muted">Нет привязанных контактов.</p>

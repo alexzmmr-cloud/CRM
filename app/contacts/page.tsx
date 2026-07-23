@@ -87,6 +87,17 @@ export default async function ContactsPage({
                       </Link>
                     </p>
                   )}
+                  <p className="quick-action">
+                    <Link
+                      href={`/opportunities?prefillContactId=${selectedContact.id}${
+                        selectedContact.accountId
+                          ? `&prefillAccountId=${selectedContact.accountId}`
+                          : ""
+                      }`}
+                    >
+                      + Создать сделку для этого контакта
+                    </Link>
+                  </p>
                   <h3>Сделки</h3>
                   {selectedContact.opportunities.length === 0 ? (
                     <p className="muted">Нет сделок.</p>
