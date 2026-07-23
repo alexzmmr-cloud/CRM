@@ -9,6 +9,7 @@ export default function Home() {
         <Link href="/accounts">Компании</Link>
         <Link href="/contacts">Контакты</Link>
         <Link href="/opportunities">Сделки</Link>
+        <Link href="/dashboard">Dashboard</Link>
       </nav>
     </main>
   );
