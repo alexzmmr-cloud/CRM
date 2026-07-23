@@ -104,6 +104,26 @@ export default async function OpportunitiesPage({
                     accounts={accountOptions}
                     contacts={contactOptions}
                   />
+                  {selectedOpportunity.account && (
+                    <p>
+                      Компания:{" "}
+                      <Link
+                        href={`/accounts?accountId=${selectedOpportunity.account.id}`}
+                      >
+                        {selectedOpportunity.account.name}
+                      </Link>
+                    </p>
+                  )}
+                  {selectedOpportunity.contact && (
+                    <p>
+                      Контакт:{" "}
+                      <Link
+                        href={`/contacts?contactId=${selectedOpportunity.contact.id}`}
+                      >
+                        {selectedOpportunity.contact.name}
+                      </Link>
+                    </p>
+                  )}
                   {selectedOpportunity.lead && (
                     <p>
                       Исходный лид:{" "}
