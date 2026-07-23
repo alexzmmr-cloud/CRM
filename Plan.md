@@ -132,12 +132,12 @@
   - Проверка: `prisma validate`, `prisma db pull`/`prisma migrate status` без ошибок подключения; `.env` не закоммичен, `.env.example` не содержит реальных значений.
   - Итог: контрольная точка — `prisma@6.19.3`/`@prisma/client@6.19.3` установлены точными версиями (без `^`/`~`); БД `akv_3_7_1_crm` создана в локальном PostgreSQL 16; `prisma/schema.prisma` создан вручную (стандартный контур `env("DATABASE_URL")`, без адаптеров); `.env` создан локально (реальный `DATABASE_URL`, не коммитится) и `.env.example` (плейсхолдер `PASSWORD`, коммитится); `.gitignore` дополнен исключением `!.env.example`, чтобы он не терялся под общим `.env*`. `prisma validate` — валидна; `prisma migrate status` подтвердил подключение к БД (ошибка «нет миграций» ожидаема — моделей ещё нет, будут на шаге 3). Дополнительно (по замечанию пользователя): вместо суперюзера `postgres` создана отдельная роль `akv_3_7_1_crm` с правами только на свою БД (назначена владельцем `akv_3_7_1_crm`), `DATABASE_URL` обновлён на неё — приложение больше не подключается суперюзером. Секрет не печатался в вывод команд и не коммитился.
 
-- [ ] 3. Модель данных
+- [x] 3. Модель данных
   - Вход: подтверждённая схема сущностей и полей (раздел 2.1 Database).
   - Действие: описать модели `Lead`, `Account`, `Contact`, `Opportunity`, `Activity` в `schema.prisma`, связи между ними, создать и применить миграцию.
   - Результат: таблицы созданы в локальной БД, Prisma Client сгенерирован.
   - Проверка: `prisma migrate dev`, `prisma validate`, чтение/запись тестовой записи каждой сущности.
-  - Итог: заполняется по факту выполнения.
+  - Итог: контрольная точка — все 5 моделей описаны в `prisma/schema.prisma` со связями (`Lead 1:1 Opportunity` через `leadId @unique`, `Account 1:N Contact/Opportunity`, `Contact 1:N Opportunity`, `Opportunity 1:N Activity`); `Lead.status`/`Lead.source`/`Opportunity.stage`/`Activity.type` — обычные `String` без enum (allowlist будет в коде на следующих шагах); `Activity.dueDate`/`Activity.done` — nullable, для `type = "note"` не используются. Миграция `20260723103828_init_crm_entities` применена (`prisma migrate dev`); по пути обнаружено и решено побочно: роль `akv_3_7_1_crm` не имела прав на shadow-БД (`P3014`) — выдан `CREATEDB` той же ограниченной роли (не суперюзеру), миграция прошла. `prisma validate`/`prisma migrate status` — чисто. Временный скрипт (создание/чтение со связями/удаление по одной записи каждой сущности) подтвердил: все связи читаются корректно (`Opportunity.account/contact/lead/activities`), cleanup выполнен, скрипт удалён после проверки.
 
 - [ ] 4. Seed и dev-данные
   - Вход: применённая схема (шаг 3).

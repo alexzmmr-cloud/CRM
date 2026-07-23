@@ -6,3 +6,74 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+model Lead {
+  id          String       @id @default(cuid())
+  name        String
+  company     String?
+  contact     String?
+  note        String?
+  source      String
+  status      String       @default("new")
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  opportunity Opportunity?
+}
+
+model Account {
+  id            String        @id @default(cuid())
+  name          String
+  website       String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  contacts      Contact[]
+  opportunities Opportunity[]
+}
+
+model Contact {
+  id            String        @id @default(cuid())
+  name          String
+  email         String?
+  phone         String?
+  role          String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  account       Account?      @relation(fields: [accountId], references: [id])
+  accountId     String?
+  opportunities Opportunity[]
+}
+
+model Opportunity {
+  id        String   @id @default(cuid())
+  title     String
+  amount    Decimal?
+  venue     String?
+  timeline  String?
+  format    String?
+  stage     String   @default("new")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  account   Account? @relation(fields: [accountId], references: [id])
+  accountId String?
+
+  contact   Contact? @relation(fields: [contactId], references: [id])
+  contactId String?
+
+  lead   Lead?   @relation(fields: [leadId], references: [id])
+  leadId String? @unique
+
+  activities Activity[]
+}
+
+model Activity {
+  id            String      @id @default(cuid())
+  type          String
+  content       String
+  dueDate       DateTime?
+  done          Boolean?
+  createdAt     DateTime    @default(now())
+
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id])
+  opportunityId String
+}
