@@ -218,7 +218,6 @@ async function main() {
     oppBrandWon,
     oppExpoQualified,
     oppStroyNew,
-    oppArtLost,
   ] = opportunities;
 
   await Promise.all([
