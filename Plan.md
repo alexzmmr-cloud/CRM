@@ -139,12 +139,12 @@
   - Проверка: `prisma migrate dev`, `prisma validate`, чтение/запись тестовой записи каждой сущности.
   - Итог: контрольная точка — все 5 моделей описаны в `prisma/schema.prisma` со связями (`Lead 1:1 Opportunity` через `leadId @unique`, `Account 1:N Contact/Opportunity`, `Contact 1:N Opportunity`, `Opportunity 1:N Activity`); `Lead.status`/`Lead.source`/`Opportunity.stage`/`Activity.type` — обычные `String` без enum (allowlist будет в коде на следующих шагах); `Activity.dueDate`/`Activity.done` — nullable, для `type = "note"` не используются. Миграция `20260723103828_init_crm_entities` применена (`prisma migrate dev`); по пути обнаружено и решено побочно: роль `akv_3_7_1_crm` не имела прав на shadow-БД (`P3014`) — выдан `CREATEDB` той же ограниченной роли (не суперюзеру), миграция прошла. `prisma validate`/`prisma migrate status` — чисто. Временный скрипт (создание/чтение со связями/удаление по одной записи каждой сущности) подтвердил: все связи читаются корректно (`Opportunity.account/contact/lead/activities`), cleanup выполнен, скрипт удалён после проверки.
 
-- [ ] 4. Seed и dev-данные
+- [x] 4. Seed и dev-данные
   - Вход: применённая схема (шаг 3).
   - Действие: написать seed-скрипт с предсказуемыми dev-данными (лиды всех источников, компании, контакты, сделки на разных стадиях, activities), настроить команды seed/reset.
   - Результат: воспроизводимый набор dev-данных для ручной проверки сценария.
   - Проверка: запуск seed → данные видны в БД; повторный reset+seed даёт тот же результат.
-  - Итог: заполняется по факту выполнения.
+  - Итог: контрольная точка — `prisma/seed.ts` создан с фиксированным набором (по решению пользователя): 6 Lead (по одному на каждый source `site`/`email`/`phone`/`referral`/`manual` + один доп. `site`; статусы: 3× `new`/`converted`/1× `disqualified` в комбинации, покрывающей все статусы), 4 Account, 5 Contact, 6 Opportunity (стадии: `new`, `qualified`, `proposal`, `negotiation`, `won`, `lost` — по одной на каждую), 8 Activity (note и task, включая одну просроченную задачу `dueDate` в прошлом и одну выполненную `done: true` — для будущих KPI Dashboard). 3 лида намеренно оставлены без связанной Opportunity — материал для сценария convert lead (шаг 10). `tsx@4.23.1` установлен точной версией для запуска seed; `package.json` дополнен `scripts.db:seed`/`scripts.db:reset` и `prisma.seed` (deprecated-предупреждение Prisma о переходе на `prisma.config.ts` — намеренно проигнорировано, так как отказ от `prisma.config.ts` зафиксирован как решение в разделе 1.3). Опасное действие `prisma migrate reset --force` выполнено только после явного письменного подтверждения пользователя (Prisma сама заблокировала запуск без `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION`). Проверка: первый запуск `npx tsx prisma/seed.ts` и повторный `npm run db:reset` дали идентичные счётчики — 6/4/5/6/8; временный скрипт подсчёта строк удалён после проверки.
 
 - [ ] 5. CRUD лидов
   - Вход: модель данных и seed (шаги 3-4).
