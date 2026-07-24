@@ -105,6 +105,7 @@ export async function convertLead(id: string): Promise<ConvertLeadResult> {
     });
 
     revalidatePath("/leads");
+    revalidatePath(`/leads/${lead.id}`);
     revalidatePath("/accounts");
     revalidatePath("/contacts");
     revalidatePath("/opportunities");
@@ -139,6 +140,7 @@ export async function createLead(
   try {
     const lead = await prisma.lead.create({ data: parsed.data });
     revalidatePath("/leads");
+    revalidatePath(`/leads/${lead.id}`);
     return { ok: true, lead };
   } catch {
     return { ok: false, error: "Не удалось сохранить лида. Попробуйте ещё раз." };
@@ -165,6 +167,7 @@ export async function updateLead(
   try {
     const lead = await prisma.lead.update({ where: { id }, data: parsed.data });
     revalidatePath("/leads");
+    revalidatePath(`/leads/${lead.id}`);
     return { ok: true, lead };
   } catch {
     return { ok: false, error: "Не удалось сохранить лида. Попробуйте ещё раз." };

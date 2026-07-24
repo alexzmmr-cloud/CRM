@@ -2,7 +2,13 @@
 
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { OPPORTUNITY_STAGES } from "@/lib/opportunity";
+import {
+  OPPORTUNITY_STAGES,
+  OPPORTUNITY_STAGE_META,
+  OPEN_OPPORTUNITY_STAGES,
+  isOpportunityStatus,
+  type OpportunityStatus,
+} from "@/lib/opportunity";
 import { revalidatePath } from "next/cache";
 
 const opportunityInputSchema = z.object({
@@ -30,19 +36,40 @@ const opportunityUpdateSchema = opportunityInputSchema.extend({
 export type OpportunityFilters = {
   q?: string;
   stage?: string;
+  status?: string;
 };
 
+function statusWhereClause(status?: string) {
+  if (!status || !isOpportunityStatus(status)) return {};
+  switch (status as OpportunityStatus) {
+    case "won":
+      return { stage: "won" };
+    case "lost":
+      return { stage: "lost" };
+    case "open":
+      return { stage: { in: OPEN_OPPORTUNITY_STAGES } };
+    case "stuck":
+      return { activities: { none: { type: "task", done: false } } };
+  }
+}
+
 export async function getOpportunities(filters: OpportunityFilters = {}) {
-  const { q, stage } = filters;
+  const { q, stage, status } = filters;
   return prisma.opportunity.findMany({
     where: {
       AND: [
         q ? { title: { contains: q, mode: "insensitive" } } : {},
         stage ? { stage } : {},
+        statusWhereClause(status),
       ],
     },
     orderBy: { createdAt: "desc" },
-    include: { account: true, contact: true, lead: true },
+    include: {
+      account: true,
+      contact: true,
+      lead: true,
+      activities: { where: { type: "task", done: false }, select: { id: true } },
+    },
   });
 }
 
@@ -58,12 +85,26 @@ export async function getOpportunity(id: string) {
   });
 }
 
+type SerializedOpportunity = Omit<
+  Awaited<ReturnType<typeof prisma.opportunity.create>>,
+  "amount"
+> & { amount: number | null };
+
 export type OpportunityActionResult =
   | {
       ok: true;
-      opportunity: Awaited<ReturnType<typeof prisma.opportunity.create>>;
+      opportunity: SerializedOpportunity;
     }
   | { ok: false; error: string };
+
+function serializeOpportunity(
+  opportunity: Awaited<ReturnType<typeof prisma.opportunity.create>>,
+): SerializedOpportunity {
+  return {
+    ...opportunity,
+    amount: opportunity.amount ? Number(opportunity.amount) : null,
+  };
+}
 
 export async function createOpportunity(
   formData: FormData,
@@ -85,7 +126,8 @@ export async function createOpportunity(
   try {
     const opportunity = await prisma.opportunity.create({ data: parsed.data });
     revalidatePath("/opportunities");
-    return { ok: true, opportunity };
+    revalidatePath(`/opportunities/${opportunity.id}`);
+    return { ok: true, opportunity: serializeOpportunity(opportunity) };
   } catch {
     return {
       ok: false,
@@ -142,11 +184,17 @@ export async function updateOpportunity(
     };
   }
 
+  const closedAt = isEnteringStage
+    ? OPPORTUNITY_STAGE_META[data.stage].isWon || OPPORTUNITY_STAGE_META[data.stage].isLost
+      ? new Date()
+      : null
+    : undefined;
+
   try {
     const opportunity = await prisma.$transaction(async (tx) => {
       const updated = await tx.opportunity.update({
         where: { id },
-        data,
+        data: closedAt !== undefined ? { ...data, closedAt } : data,
       });
       if (isEnteringStage && data.stage === "lost" && trimmedReason) {
         await tx.activity.create({
@@ -160,7 +208,8 @@ export async function updateOpportunity(
       return updated;
     });
     revalidatePath("/opportunities");
-    return { ok: true, opportunity };
+    revalidatePath(`/opportunities/${opportunity.id}`);
+    return { ok: true, opportunity: serializeOpportunity(opportunity) };
   } catch {
     return {
       ok: false,
@@ -204,11 +253,18 @@ export async function updateOpportunityStage(
     };
   }
 
+  const typedStage = stage as (typeof OPPORTUNITY_STAGES)[number];
+  const closedAt = isEnteringStage
+    ? OPPORTUNITY_STAGE_META[typedStage].isWon || OPPORTUNITY_STAGE_META[typedStage].isLost
+      ? new Date()
+      : null
+    : undefined;
+
   try {
     const opportunity = await prisma.$transaction(async (tx) => {
       const updated = await tx.opportunity.update({
         where: { id },
-        data: { stage },
+        data: closedAt !== undefined ? { stage, closedAt } : { stage },
       });
       if (isEnteringStage && stage === "lost" && trimmedReason) {
         await tx.activity.create({
@@ -222,7 +278,8 @@ export async function updateOpportunityStage(
       return updated;
     });
     revalidatePath("/opportunities");
-    return { ok: true as const, opportunity };
+    revalidatePath(`/opportunities/${opportunity.id}`);
+    return { ok: true as const, opportunity: serializeOpportunity(opportunity) };
   } catch {
     return {
       ok: false as const,

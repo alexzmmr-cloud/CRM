@@ -24,6 +24,8 @@ model Account {
   id            String        @id @default(cuid())
   name          String
   website       String?
+  industry      String?
+  phone         String?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   contacts      Contact[]
@@ -44,15 +46,16 @@ model Contact {
 }
 
 model Opportunity {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   title     String
   amount    Decimal?
   venue     String?
   timeline  String?
   format    String?
-  stage     String   @default("new")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  stage     String    @default("new")
+  closedAt  DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   account   Account? @relation(fields: [accountId], references: [id])
   accountId String?
@@ -67,12 +70,12 @@ model Opportunity {
 }
 
 model Activity {
-  id            String      @id @default(cuid())
-  type          String
-  content       String
-  dueDate       DateTime?
-  done          Boolean?
-  createdAt     DateTime    @default(now())
+  id        String    @id @default(cuid())
+  type      String
+  content   String
+  dueDate   DateTime?
+  done      Boolean?
+  createdAt DateTime  @default(now())
 
   opportunity   Opportunity @relation(fields: [opportunityId], references: [id])
   opportunityId String

@@ -1,128 +1,94 @@
 import Link from "next/link";
-import { getContact, getContacts } from "@/app/actions/contact";
+import { getContacts } from "@/app/actions/contact";
 import { getAccounts } from "@/app/actions/account";
-import { ContactForm } from "./contact-form";
+import { CreateContactButton } from "./create-contact-button";
 
 export const dynamic = "force-dynamic";
+
+function formatDate(date: Date): string {
+  return date.toLocaleDateString("ru-RU");
+}
 
 export default async function ContactsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ contactId?: string; q?: string }>;
+  searchParams: Promise<{ q?: string }>;
 }) {
-  const { contactId, q } = await searchParams;
+  const { q } = await searchParams;
   const [contacts, accounts] = await Promise.all([
     getContacts({ q }),
     getAccounts(),
   ]);
-  const effectiveContactId = contactId ?? contacts[0]?.id ?? null;
-  const selectedContact = effectiveContactId
-    ? await getContact(effectiveContactId)
-    : null;
   const accountOptions = accounts.map((account) => ({
     id: account.id,
     name: account.name,
   }));
 
   return (
-    <main className="leads-page">
-      <h1>Контакты</h1>
-      <div className="leads-layout">
-        <section className="leads-list">
-          <h2>Список контактов</h2>
-          <form className="filters" method="get">
-            <input
-              type="search"
-              name="q"
-              placeholder="Поиск по имени"
-              defaultValue={q ?? ""}
-            />
-            <button type="submit">Применить</button>
-            {q && <a href="/contacts">Сбросить</a>}
-          </form>
-          {contacts.length === 0 && (
-            <p className="muted">Ничего не найдено по заданным условиям.</p>
-          )}
-          <ul>
-            {contacts.map((contact) => (
-              <li key={contact.id}>
-                <Link
-                  href={`/contacts?contactId=${contact.id}`}
-                  className={contact.id === effectiveContactId ? "active" : ""}
-                >
-                  <strong>{contact.name}</strong>
-                  <span className="muted">
-                    {contact.account?.name ?? "Без компании"}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        <section className="leads-detail">
-          <h2>Карточка контакта</h2>
-          {selectedContact ? (
-            <>
-              <ContactForm
-                contact={{
-                  id: selectedContact.id,
-                  name: selectedContact.name,
-                  email: selectedContact.email,
-                  phone: selectedContact.phone,
-                  role: selectedContact.role,
-                  accountId: selectedContact.accountId,
-                }}
-                accounts={accountOptions}
-              />
-              {selectedContact.account && (
-                <p>
-                  Компания:{" "}
-                  <Link
-                    href={`/accounts?accountId=${selectedContact.account.id}`}
-                  >
-                    {selectedContact.account.name}
-                  </Link>
-                </p>
-              )}
-              <p className="quick-action">
-                <Link
-                  href={`/opportunities?prefillContactId=${selectedContact.id}${
-                    selectedContact.accountId
-                      ? `&prefillAccountId=${selectedContact.accountId}`
-                      : ""
-                  }`}
-                >
-                  + Создать сделку для этого контакта
-                </Link>
-              </p>
-              <h3>Сделки</h3>
-              {selectedContact.opportunities.length === 0 ? (
-                <p className="muted">Нет сделок.</p>
-              ) : (
-                <ul>
-                  {selectedContact.opportunities.map((opportunity) => (
-                    <li key={opportunity.id}>
-                      <Link
-                        href={`/opportunities?opportunityId=${opportunity.id}`}
-                      >
-                        {opportunity.title}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </>
-          ) : (
-            <p className="muted">Нет контактов для отображения.</p>
-          )}
-        </section>
-
-        <section className="leads-create">
-          <h2>Новый контакт</h2>
-          <ContactForm accounts={accountOptions} />
-        </section>
+    <main className="leads-page list-page">
+      <div className="list-header">
+        <h1>Контакты</h1>
+        <CreateContactButton accounts={accountOptions} />
       </div>
+      <form className="filters" method="get">
+        <input
+          type="search"
+          name="q"
+          placeholder="Поиск по имени"
+          defaultValue={q ?? ""}
+        />
+        <button type="submit">Применить</button>
+        {q && <Link href="/contacts">Сбросить</Link>}
+      </form>
+      {contacts.length === 0 && (
+        <p className="muted">Ничего не найдено по заданным условиям.</p>
+      )}
+      {contacts.length > 0 && (
+        <div className="data-table-wrap">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Имя</th>
+                <th>Компания</th>
+                <th>Email</th>
+                <th>Телефон</th>
+                <th>Дата</th>
+              </tr>
+            </thead>
+            <tbody>
+              {contacts.map((contact) => (
+                <tr key={contact.id}>
+                  <td>
+                    <Link href={`/contacts/${contact.id}`}>
+                      <strong>{contact.name}</strong>
+                    </Link>
+                  </td>
+                  <td className="ellipsis">
+                    <Link href={`/contacts/${contact.id}`}>
+                      {contact.account?.name ?? "Без компании"}
+                    </Link>
+                  </td>
+                  <td className="ellipsis">
+                    <Link href={`/contacts/${contact.id}`}>
+                      {contact.email || "—"}
+                    </Link>
+                  </td>
+                  <td className="nowrap">
+                    <Link href={`/contacts/${contact.id}`}>
+                      {contact.phone || "—"}
+                    </Link>
+                  </td>
+                  <td className="nowrap">
+                    <Link href={`/contacts/${contact.id}`}>
+                      {formatDate(contact.createdAt)}
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </main>
   );
 }

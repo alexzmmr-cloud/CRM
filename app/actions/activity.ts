@@ -40,6 +40,7 @@ export async function addNote(
       },
     });
     revalidatePath("/opportunities");
+    revalidatePath(`/opportunities/${activity.opportunityId}`);
     return { ok: true, activity };
   } catch {
     return {
@@ -73,6 +74,7 @@ export async function addTask(
       },
     });
     revalidatePath("/opportunities");
+    revalidatePath(`/opportunities/${activity.opportunityId}`);
     return { ok: true, activity };
   } catch {
     return {
@@ -89,6 +91,7 @@ export async function setTaskDone(id: string, done: boolean) {
       data: { done },
     });
     revalidatePath("/opportunities");
+    revalidatePath(`/opportunities/${activity.opportunityId}`);
     return { ok: true as const, activity };
   } catch {
     return {

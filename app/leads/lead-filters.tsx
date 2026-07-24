@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   LEAD_SOURCES,
   LEAD_SOURCE_LABELS,
@@ -39,7 +40,7 @@ export function LeadFilters({
         ))}
       </select>
       <button type="submit">Применить</button>
-      {(q || source || status) && <a href="/leads">Сбросить</a>}
+      {(q || source || status) && <Link href="/leads">Сбросить</Link>}
     </form>
   );
 }

@@ -22,7 +22,15 @@ type LeadFormValues = {
   status?: LeadStatus;
 };
 
-export function LeadForm({ lead }: { lead?: LeadFormValues }) {
+export function LeadForm({
+  lead,
+  onSuccess,
+  layout = "vertical",
+}: {
+  lead?: LeadFormValues;
+  onSuccess?: () => void;
+  layout?: "vertical" | "horizontal";
+}) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [isPending, startTransition] = useTransition();
@@ -46,13 +54,18 @@ export function LeadForm({ lead }: { lead?: LeadFormValues }) {
         router.refresh();
       } else {
         formRef.current?.reset();
-        router.push(`/leads?leadId=${result.lead.id}`);
+        onSuccess?.();
+        router.push(`/leads/${result.lead.id}`);
       }
     });
   }
 
   return (
-    <form ref={formRef} action={handleSubmit} className="lead-form">
+    <form
+      ref={formRef}
+      action={handleSubmit}
+      className={layout === "horizontal" ? "entity-form-grid" : "lead-form"}
+    >
       {error && <p className="form-error">{error}</p>}
       <label>
         Имя

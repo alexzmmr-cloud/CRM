@@ -19,6 +19,7 @@ type OpportunityFormValues = {
   accountId?: string | null;
   contactId?: string | null;
   stage?: OpportunityStage;
+  closedAt?: Date | null;
 };
 
 type Option = { id: string; name: string };
@@ -27,10 +28,14 @@ export function OpportunityForm({
   opportunity,
   accounts,
   contacts,
+  onSuccess,
+  layout = "vertical",
 }: {
   opportunity?: OpportunityFormValues;
   accounts: Option[];
   contacts: Option[];
+  onSuccess?: () => void;
+  layout?: "vertical" | "horizontal";
 }) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
@@ -58,13 +63,18 @@ export function OpportunityForm({
         router.refresh();
       } else {
         formRef.current?.reset();
-        router.push(`/opportunities?opportunityId=${result.opportunity.id}`);
+        onSuccess?.();
+        router.push(`/opportunities/${result.opportunity.id}`);
       }
     });
   }
 
   return (
-    <form ref={formRef} action={handleSubmit} className="lead-form">
+    <form
+      ref={formRef}
+      action={handleSubmit}
+      className={layout === "horizontal" ? "entity-form-grid" : "lead-form"}
+    >
       {error && <p className="form-error">{error}</p>}
       <label>
         Название
@@ -136,6 +146,11 @@ export function OpportunityForm({
           Причина расторжения
           <input name="lostReason" required />
         </label>
+      )}
+      {isEdit && opportunity?.closedAt && (
+        <p className="muted">
+          Дата закрытия: {opportunity.closedAt.toLocaleDateString("ru-RU")}
+        </p>
       )}
       <button type="submit" disabled={isPending}>
         {isEdit ? "Сохранить" : "Создать сделку"}

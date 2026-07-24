@@ -7,6 +7,8 @@ import { revalidatePath } from "next/cache";
 const accountInputSchema = z.object({
   name: z.string().trim().min(1, "Укажите название компании"),
   website: z.string().trim().optional(),
+  industry: z.string().trim().optional(),
+  phone: z.string().trim().optional(),
 });
 
 export type AccountFilters = {
@@ -39,6 +41,8 @@ export async function createAccount(
   const parsed = accountInputSchema.safeParse({
     name: formData.get("name"),
     website: formData.get("website") || undefined,
+    industry: formData.get("industry") || undefined,
+    phone: formData.get("phone") || undefined,
   });
 
   if (!parsed.success) {
@@ -48,6 +52,7 @@ export async function createAccount(
   try {
     const account = await prisma.account.create({ data: parsed.data });
     revalidatePath("/accounts");
+    revalidatePath(`/accounts/${account.id}`);
     return { ok: true, account };
   } catch {
     return {
@@ -64,6 +69,8 @@ export async function updateAccount(
   const parsed = accountInputSchema.safeParse({
     name: formData.get("name"),
     website: formData.get("website") || undefined,
+    industry: formData.get("industry") || undefined,
+    phone: formData.get("phone") || undefined,
   });
 
   if (!parsed.success) {
@@ -76,6 +83,7 @@ export async function updateAccount(
       data: parsed.data,
     });
     revalidatePath("/accounts");
+    revalidatePath(`/accounts/${account.id}`);
     return { ok: true, account };
   } catch {
     return {

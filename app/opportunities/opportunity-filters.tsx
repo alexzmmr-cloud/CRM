@@ -1,11 +1,19 @@
-import { OPPORTUNITY_STAGES, OPPORTUNITY_STAGE_LABELS } from "@/lib/opportunity";
+import Link from "next/link";
+import {
+  OPPORTUNITY_STAGES,
+  OPPORTUNITY_STAGE_LABELS,
+  OPPORTUNITY_STATUSES,
+  OPPORTUNITY_STATUS_LABELS,
+} from "@/lib/opportunity";
 
 export function OpportunityFilters({
   q,
   stage,
+  status,
 }: {
   q?: string;
   stage?: string;
+  status?: string;
 }) {
   return (
     <form className="filters" method="get">
@@ -23,8 +31,16 @@ export function OpportunityFilters({
           </option>
         ))}
       </select>
+      <select name="status" defaultValue={status ?? ""}>
+        <option value="">Все статусы</option>
+        {OPPORTUNITY_STATUSES.map((s) => (
+          <option key={s} value={s}>
+            {OPPORTUNITY_STATUS_LABELS[s]}
+          </option>
+        ))}
+      </select>
       <button type="submit">Применить</button>
-      {(q || stage) && <a href="/opportunities">Сбросить</a>}
+      {(q || stage || status) && <Link href="/opportunities">Сбросить</Link>}
     </form>
   );
 }

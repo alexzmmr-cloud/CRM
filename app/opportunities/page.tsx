@@ -1,16 +1,18 @@
 import Link from "next/link";
-import { getOpportunities, getOpportunity } from "@/app/actions/opportunity";
+import { getOpportunities } from "@/app/actions/opportunity";
 import { getAccounts } from "@/app/actions/account";
 import { getContacts } from "@/app/actions/contact";
 import {
   OPPORTUNITY_STAGE_BADGE_CLASSES,
   OPPORTUNITY_STAGE_LABELS,
+  OPPORTUNITY_STATUS_BADGE_CLASSES,
+  OPPORTUNITY_STATUS_LABELS,
+  getOpportunityStatus,
   isOpportunityStage,
+  isOpportunityStuck,
 } from "@/lib/opportunity";
-import { OpportunityForm } from "./opportunity-form";
 import { OpportunityFilters } from "./opportunity-filters";
-import { StageControl } from "./stage-control";
-import { ActivityPanel } from "./activity-panel";
+import { CreateOpportunityButton } from "./create-opportunity-button";
 
 export const dynamic = "force-dynamic";
 
@@ -21,33 +23,25 @@ function formatAmount(amount: unknown): string {
   return new Intl.NumberFormat("ru-RU").format(numeric) + " ₽";
 }
 
+function formatDate(date: Date | null): string {
+  return date ? date.toLocaleDateString("ru-RU") : "—";
+}
+
 export default async function OpportunitiesPage({
   searchParams,
 }: {
   searchParams: Promise<{
-    opportunityId?: string;
     q?: string;
     stage?: string;
-    prefillAccountId?: string;
-    prefillContactId?: string;
+    status?: string;
   }>;
 }) {
-  const {
-    opportunityId,
-    q,
-    stage: stageFilter,
-    prefillAccountId,
-    prefillContactId,
-  } = await searchParams;
+  const { q, stage: stageFilter, status: statusFilter } = await searchParams;
   const [opportunities, accounts, contacts] = await Promise.all([
-    getOpportunities({ q, stage: stageFilter }),
+    getOpportunities({ q, stage: stageFilter, status: statusFilter }),
     getAccounts(),
     getContacts(),
   ]);
-  const effectiveOpportunityId = opportunityId ?? opportunities[0]?.id ?? null;
-  const selectedOpportunity = effectiveOpportunityId
-    ? await getOpportunity(effectiveOpportunityId)
-    : null;
 
   const accountOptions = accounts.map((account) => ({
     id: account.id,
@@ -59,126 +53,103 @@ export default async function OpportunitiesPage({
   }));
 
   return (
-    <main className="leads-page">
-      <h1>Сделки</h1>
-      <div className="leads-layout">
-        <section className="leads-list">
-          <h2>Список сделок</h2>
-          <OpportunityFilters q={q} stage={stageFilter} />
-          {opportunities.length === 0 && (
-            <p className="muted">Ничего не найдено по заданным условиям.</p>
-          )}
-          <ul>
-            {opportunities.map((opportunity) => {
-              const stage = isOpportunityStage(opportunity.stage)
-                ? opportunity.stage
-                : "new";
-              return (
-                <li key={opportunity.id}>
-                  <Link
-                    href={`/opportunities?opportunityId=${opportunity.id}`}
-                    className={
-                      opportunity.id === effectiveOpportunityId ? "active" : ""
-                    }
-                  >
-                    <strong>{opportunity.title}</strong>
-                    <span className={OPPORTUNITY_STAGE_BADGE_CLASSES[stage]}>
-                      {OPPORTUNITY_STAGE_LABELS[stage]}
-                    </span>
-                    <span className="muted">
-                      {formatAmount(opportunity.amount)} ·{" "}
-                      {opportunity.account?.name ?? "Без компании"}
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-
-        <section className="leads-detail">
-          <h2>Карточка сделки</h2>
-          {selectedOpportunity ? (
-            <>
-              <StageControl
-                opportunityId={selectedOpportunity.id}
-                stage={
-                  isOpportunityStage(selectedOpportunity.stage)
-                    ? selectedOpportunity.stage
-                    : "new"
-                }
-              />
-              <OpportunityForm
-                opportunity={{
-                  id: selectedOpportunity.id,
-                  title: selectedOpportunity.title,
-                  amount: selectedOpportunity.amount
-                    ? Number(selectedOpportunity.amount)
-                    : null,
-                  venue: selectedOpportunity.venue,
-                  timeline: selectedOpportunity.timeline,
-                  format: selectedOpportunity.format,
-                  accountId: selectedOpportunity.accountId,
-                  contactId: selectedOpportunity.contactId,
-                  stage: isOpportunityStage(selectedOpportunity.stage)
-                    ? selectedOpportunity.stage
-                    : undefined,
-                }}
-                accounts={accountOptions}
-                contacts={contactOptions}
-              />
-              {selectedOpportunity.account && (
-                <p>
-                  Компания:{" "}
-                  <Link
-                    href={`/accounts?accountId=${selectedOpportunity.account.id}`}
-                  >
-                    {selectedOpportunity.account.name}
-                  </Link>
-                </p>
-              )}
-              {selectedOpportunity.contact && (
-                <p>
-                  Контакт:{" "}
-                  <Link
-                    href={`/contacts?contactId=${selectedOpportunity.contact.id}`}
-                  >
-                    {selectedOpportunity.contact.name}
-                  </Link>
-                </p>
-              )}
-              {selectedOpportunity.lead && (
-                <p>
-                  Исходный лид:{" "}
-                  <Link href={`/leads?leadId=${selectedOpportunity.lead.id}`}>
-                    {selectedOpportunity.lead.name}
-                  </Link>
-                </p>
-              )}
-              <h3>Активности</h3>
-              <ActivityPanel
-                opportunityId={selectedOpportunity.id}
-                activities={selectedOpportunity.activities}
-              />
-            </>
-          ) : (
-            <p className="muted">Нет сделок для отображения.</p>
-          )}
-        </section>
-
-        <section className="leads-create">
-          <h2>Новая сделка</h2>
-          <OpportunityForm
-            opportunity={
-              prefillAccountId || prefillContactId
-                ? { accountId: prefillAccountId, contactId: prefillContactId }
-                : undefined
-            }
-            accounts={accountOptions}
-            contacts={contactOptions}
-          />
-        </section>
+    <main className="leads-page list-page">
+      <div className="list-header">
+        <h1>Сделки</h1>
+        <CreateOpportunityButton
+          accounts={accountOptions}
+          contacts={contactOptions}
+        />
       </div>
+      <OpportunityFilters q={q} stage={stageFilter} status={statusFilter} />
+      {opportunities.length === 0 && (
+        <p className="muted">Ничего не найдено по заданным условиям.</p>
+      )}
+      {opportunities.length > 0 && (
+        <div className="data-table-wrap">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Название</th>
+                <th>Компания</th>
+                <th>Контакт</th>
+                <th>Сумма</th>
+                <th>Стадия</th>
+                <th>Статус</th>
+                <th>Создана</th>
+                <th>Закрыта</th>
+              </tr>
+            </thead>
+            <tbody>
+              {opportunities.map((opportunity) => {
+                const stage = isOpportunityStage(opportunity.stage)
+                  ? opportunity.stage
+                  : "new";
+                const status = getOpportunityStatus(opportunity.stage);
+                const stuck = isOpportunityStuck(
+                  opportunity.activities.length > 0,
+                );
+                return (
+                  <tr key={opportunity.id}>
+                    <td>
+                      <Link href={`/opportunities/${opportunity.id}`}>
+                        <strong>{opportunity.title}</strong>
+                      </Link>
+                    </td>
+                    <td className="ellipsis">
+                      <Link href={`/opportunities/${opportunity.id}`}>
+                        {opportunity.account?.name ?? "Без компании"}
+                      </Link>
+                    </td>
+                    <td className="ellipsis">
+                      <Link href={`/opportunities/${opportunity.id}`}>
+                        {opportunity.contact?.name ?? "Без контакта"}
+                      </Link>
+                    </td>
+                    <td className="nowrap">
+                      <Link href={`/opportunities/${opportunity.id}`}>
+                        {formatAmount(opportunity.amount)}
+                      </Link>
+                    </td>
+                    <td>
+                      <Link href={`/opportunities/${opportunity.id}`}>
+                        <span className={OPPORTUNITY_STAGE_BADGE_CLASSES[stage]}>
+                          {OPPORTUNITY_STAGE_LABELS[stage]}
+                        </span>
+                      </Link>
+                    </td>
+                    <td>
+                      <Link href={`/opportunities/${opportunity.id}`}>
+                        <span className={OPPORTUNITY_STATUS_BADGE_CLASSES[status]}>
+                          {OPPORTUNITY_STATUS_LABELS[status]}
+                        </span>
+                        {stuck && (
+                          <>
+                            {" "}
+                            <span className={OPPORTUNITY_STATUS_BADGE_CLASSES.stuck}>
+                              {OPPORTUNITY_STATUS_LABELS.stuck}
+                            </span>
+                          </>
+                        )}
+                      </Link>
+                    </td>
+                    <td className="nowrap">
+                      <Link href={`/opportunities/${opportunity.id}`}>
+                        {formatDate(opportunity.createdAt)}
+                      </Link>
+                    </td>
+                    <td className="nowrap">
+                      <Link href={`/opportunities/${opportunity.id}`}>
+                        {formatDate(opportunity.closedAt)}
+                      </Link>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </main>
   );
 }

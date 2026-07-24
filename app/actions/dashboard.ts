@@ -7,6 +7,7 @@ export async function getDashboardKpis() {
     leadsCount,
     openOpportunities,
     overdueTasksCount,
+    stuckDealsCount,
     leadsByStatusRaw,
     leadsBySourceRaw,
   ] = await Promise.all([
@@ -17,6 +18,11 @@ export async function getDashboardKpis() {
     }),
     prisma.activity.count({
       where: { type: "task", done: false, dueDate: { lt: new Date() } },
+    }),
+    prisma.opportunity.count({
+      where: {
+        activities: { none: { type: "task", done: false } },
+      },
     }),
     prisma.lead.groupBy({ by: ["status"], _count: { _all: true } }),
     prisma.lead.groupBy({ by: ["source"], _count: { _all: true } }),
@@ -46,6 +52,7 @@ export async function getDashboardKpis() {
     openOpportunitiesCount: openOpportunities.length,
     openOpportunitiesSum,
     overdueTasksCount,
+    stuckDealsCount,
     leadsByStatus,
     leadsBySource,
   };
@@ -78,5 +85,16 @@ export async function getOverdueTasks(limit = 5) {
     orderBy: { dueDate: "asc" },
     take: limit,
     include: { opportunity: true },
+  });
+}
+
+export async function getStuckDeals(limit = 5) {
+  return prisma.opportunity.findMany({
+    where: {
+      activities: { none: { type: "task", done: false } },
+    },
+    orderBy: { updatedAt: "asc" },
+    take: limit,
+    include: { account: true },
   });
 }

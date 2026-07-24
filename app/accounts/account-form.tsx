@@ -8,9 +8,19 @@ type AccountFormValues = {
   id?: string;
   name?: string;
   website?: string | null;
+  industry?: string | null;
+  phone?: string | null;
 };
 
-export function AccountForm({ account }: { account?: AccountFormValues }) {
+export function AccountForm({
+  account,
+  onSuccess,
+  layout = "vertical",
+}: {
+  account?: AccountFormValues;
+  onSuccess?: () => void;
+  layout?: "vertical" | "horizontal";
+}) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [isPending, startTransition] = useTransition();
@@ -34,13 +44,18 @@ export function AccountForm({ account }: { account?: AccountFormValues }) {
         router.refresh();
       } else {
         formRef.current?.reset();
-        router.push(`/accounts?accountId=${result.account.id}`);
+        onSuccess?.();
+        router.push(`/accounts/${result.account.id}`);
       }
     });
   }
 
   return (
-    <form ref={formRef} action={handleSubmit} className="lead-form">
+    <form
+      ref={formRef}
+      action={handleSubmit}
+      className={layout === "horizontal" ? "entity-form-grid" : "lead-form"}
+    >
       {error && <p className="form-error">{error}</p>}
       <label>
         Название
@@ -49,6 +64,14 @@ export function AccountForm({ account }: { account?: AccountFormValues }) {
       <label>
         Сайт
         <input name="website" defaultValue={account?.website ?? ""} />
+      </label>
+      <label>
+        Род деятельности
+        <input name="industry" defaultValue={account?.industry ?? ""} />
+      </label>
+      <label>
+        Телефон
+        <input name="phone" defaultValue={account?.phone ?? ""} />
       </label>
       <button type="submit" disabled={isPending}>
         {isEdit ? "Сохранить" : "Создать компанию"}

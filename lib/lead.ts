@@ -39,3 +39,20 @@ export const LEAD_STATUS_BADGE_CLASSES: Record<LeadStatus, string> = {
 export function isLeadStatus(value: string): value is LeadStatus {
   return (LEAD_STATUSES as readonly string[]).includes(value);
 }
+
+/**
+ * Lead.contact хранит email или телефон одной строкой (без разделения полей).
+ * Формат определяется по наличию "@" — та же эвристика, что использует convert lead.
+ */
+export function splitLeadContact(contact: string | null): {
+  email: string | null;
+  phone: string | null;
+} {
+  const trimmed = contact?.trim();
+  if (!trimmed) return { email: null, phone: null };
+  const isEmail = trimmed.includes("@");
+  return {
+    email: isEmail ? trimmed : null,
+    phone: isEmail ? null : trimmed,
+  };
+}

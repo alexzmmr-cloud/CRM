@@ -1,115 +1,111 @@
 import Link from "next/link";
-import { getLead, getLeads } from "@/app/actions/lead";
+import { getLeads } from "@/app/actions/lead";
 import {
   LEAD_SOURCE_LABELS,
   LEAD_STATUS_BADGE_CLASSES,
   LEAD_STATUS_LABELS,
   isLeadSource,
   isLeadStatus,
+  splitLeadContact,
 } from "@/lib/lead";
-import { LeadForm } from "./lead-form";
 import { LeadFilters } from "./lead-filters";
-import { ConvertLeadButton } from "./convert-lead-button";
+import { CreateLeadButton } from "./create-lead-button";
 
 export const dynamic = "force-dynamic";
+
+function formatDate(date: Date): string {
+  return date.toLocaleDateString("ru-RU");
+}
 
 export default async function LeadsPage({
   searchParams,
 }: {
   searchParams: Promise<{
-    leadId?: string;
     q?: string;
     source?: string;
     status?: string;
   }>;
 }) {
-  const { leadId, q, source, status } = await searchParams;
+  const { q, source, status } = await searchParams;
   const leads = await getLeads({ q, source, status });
-  const effectiveLeadId = leadId ?? leads[0]?.id ?? null;
-  const selectedLead = effectiveLeadId ? await getLead(effectiveLeadId) : null;
 
   return (
-    <main className="leads-page">
-      <h1>Лиды</h1>
-      <div className="leads-layout">
-        <section className="leads-list">
-          <h2>Список лидов</h2>
-          <LeadFilters q={q} source={source} status={status} />
-          {leads.length === 0 && (
-            <p className="muted">Ничего не найдено по заданным условиям.</p>
-          )}
-          <ul>
-            {leads.map((lead) => {
-              const leadStatus = isLeadStatus(lead.status)
-                ? lead.status
-                : "new";
-              const leadSource = isLeadSource(lead.source)
-                ? lead.source
-                : null;
-              return (
-                <li key={lead.id}>
-                  <Link
-                    href={`/leads?leadId=${lead.id}`}
-                    className={lead.id === effectiveLeadId ? "active" : ""}
-                  >
-                    <strong>{lead.name}</strong>
-                    <span className={LEAD_STATUS_BADGE_CLASSES[leadStatus]}>
-                      {LEAD_STATUS_LABELS[leadStatus]}
-                    </span>
-                    <span className="muted">
-                      {leadSource ? LEAD_SOURCE_LABELS[leadSource] : lead.source}
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-
-        <section className="leads-detail">
-          <h2>Карточка лида</h2>
-          {selectedLead ? (
-            <>
-              <LeadForm
-                lead={{
-                  id: selectedLead.id,
-                  name: selectedLead.name,
-                  company: selectedLead.company,
-                  contact: selectedLead.contact,
-                  note: selectedLead.note,
-                  source: isLeadSource(selectedLead.source)
-                    ? selectedLead.source
-                    : undefined,
-                  status: isLeadStatus(selectedLead.status)
-                    ? selectedLead.status
-                    : undefined,
-                }}
-              />
-              {selectedLead.opportunity ? (
-                <p>
-                  Связанная сделка:{" "}
-                  <Link
-                    href={`/opportunities?opportunityId=${selectedLead.opportunity.id}`}
-                  >
-                    {selectedLead.opportunity.title}
-                  </Link>
-                </p>
-              ) : (
-                selectedLead.status !== "disqualified" && (
-                  <ConvertLeadButton leadId={selectedLead.id} />
-                )
-              )}
-            </>
-          ) : (
-            <p className="muted">Нет лидов для отображения.</p>
-          )}
-        </section>
-
-        <section className="leads-create">
-          <h2>Новый лид</h2>
-          <LeadForm />
-        </section>
+    <main className="leads-page list-page">
+      <div className="list-header">
+        <h1>Лиды</h1>
+        <CreateLeadButton />
       </div>
+      <LeadFilters q={q} source={source} status={status} />
+      {leads.length === 0 && (
+        <p className="muted">Ничего не найдено по заданным условиям.</p>
+      )}
+      {leads.length > 0 && (
+        <div className="data-table-wrap">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Имя</th>
+                <th>Компания</th>
+                <th>Источник</th>
+                <th>Статус</th>
+                <th>Email</th>
+                <th>Телефон</th>
+                <th>Дата</th>
+              </tr>
+            </thead>
+            <tbody>
+              {leads.map((lead) => {
+                const leadStatus = isLeadStatus(lead.status)
+                  ? lead.status
+                  : "new";
+                const leadSource = isLeadSource(lead.source)
+                  ? lead.source
+                  : null;
+                const { email, phone } = splitLeadContact(lead.contact);
+                return (
+                  <tr key={lead.id}>
+                    <td>
+                      <Link href={`/leads/${lead.id}`}>
+                        <strong>{lead.name}</strong>
+                      </Link>
+                    </td>
+                    <td className="ellipsis">
+                      <Link href={`/leads/${lead.id}`}>
+                        {lead.company || "—"}
+                      </Link>
+                    </td>
+                    <td>
+                      <Link href={`/leads/${lead.id}`}>
+                        {leadSource
+                          ? LEAD_SOURCE_LABELS[leadSource]
+                          : lead.source}
+                      </Link>
+                    </td>
+                    <td>
+                      <Link href={`/leads/${lead.id}`}>
+                        <span className={LEAD_STATUS_BADGE_CLASSES[leadStatus]}>
+                          {LEAD_STATUS_LABELS[leadStatus]}
+                        </span>
+                      </Link>
+                    </td>
+                    <td className="ellipsis">
+                      <Link href={`/leads/${lead.id}`}>{email || "—"}</Link>
+                    </td>
+                    <td className="nowrap">
+                      <Link href={`/leads/${lead.id}`}>{phone || "—"}</Link>
+                    </td>
+                    <td className="nowrap">
+                      <Link href={`/leads/${lead.id}`}>
+                        {formatDate(lead.createdAt)}
+                      </Link>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </main>
   );
 }

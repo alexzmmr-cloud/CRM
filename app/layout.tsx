@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import { SiteNav } from "./site-nav";
 import "./globals.css";
@@ -27,7 +28,9 @@ export default function RootLayout({
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body>
         <header className="site-header">
-          <SiteNav />
+          <Suspense fallback={null}>
+            <SiteNav />
+          </Suspense>
         </header>
         {children}
       </body>

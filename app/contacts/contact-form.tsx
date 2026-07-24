@@ -18,9 +18,13 @@ type AccountOption = { id: string; name: string };
 export function ContactForm({
   contact,
   accounts,
+  onSuccess,
+  layout = "vertical",
 }: {
   contact?: ContactFormValues;
   accounts: AccountOption[];
+  onSuccess?: () => void;
+  layout?: "vertical" | "horizontal";
 }) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
@@ -45,13 +49,18 @@ export function ContactForm({
         router.refresh();
       } else {
         formRef.current?.reset();
-        router.push(`/contacts?contactId=${result.contact.id}`);
+        onSuccess?.();
+        router.push(`/contacts/${result.contact.id}`);
       }
     });
   }
 
   return (
-    <form ref={formRef} action={handleSubmit} className="lead-form">
+    <form
+      ref={formRef}
+      action={handleSubmit}
+      className={layout === "horizontal" ? "entity-form-grid" : "lead-form"}
+    >
       {error && <p className="form-error">{error}</p>}
       <label>
         Имя

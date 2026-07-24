@@ -54,6 +54,7 @@ export async function createContact(
   try {
     const contact = await prisma.contact.create({ data: parsed.data });
     revalidatePath("/contacts");
+    revalidatePath(`/contacts/${contact.id}`);
     return { ok: true, contact };
   } catch {
     return {
@@ -85,6 +86,7 @@ export async function updateContact(
       data: parsed.data,
     });
     revalidatePath("/contacts");
+    revalidatePath(`/contacts/${contact.id}`);
     return { ok: true, contact };
   } catch {
     return {
