@@ -2,7 +2,10 @@
 
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { formValues } from "@/lib/form";
 import { revalidatePath } from "next/cache";
+
+const ACCOUNT_FORM_KEYS = ["name", "website", "industry", "phone"] as const;
 
 const accountInputSchema = z.object({
   name: z.string().trim().min(1, "Укажите название компании"),
@@ -38,12 +41,9 @@ export type AccountActionResult =
 export async function createAccount(
   formData: FormData,
 ): Promise<AccountActionResult> {
-  const parsed = accountInputSchema.safeParse({
-    name: formData.get("name"),
-    website: formData.get("website") || undefined,
-    industry: formData.get("industry") || undefined,
-    phone: formData.get("phone") || undefined,
-  });
+  const parsed = accountInputSchema.safeParse(
+    formValues(formData, ACCOUNT_FORM_KEYS),
+  );
 
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0].message };
@@ -66,12 +66,9 @@ export async function updateAccount(
   id: string,
   formData: FormData,
 ): Promise<AccountActionResult> {
-  const parsed = accountInputSchema.safeParse({
-    name: formData.get("name"),
-    website: formData.get("website") || undefined,
-    industry: formData.get("industry") || undefined,
-    phone: formData.get("phone") || undefined,
-  });
+  const parsed = accountInputSchema.safeParse(
+    formValues(formData, ACCOUNT_FORM_KEYS),
+  );
 
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0].message };

@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { LEAD_SOURCES, LEAD_STATUSES } from "@/lib/lead";
+import { formValues } from "@/lib/form";
 import { revalidatePath } from "next/cache";
 
 const leadInputSchema = z.object({
@@ -16,6 +17,9 @@ const leadInputSchema = z.object({
 const leadUpdateSchema = leadInputSchema.extend({
   status: z.enum(LEAD_STATUSES),
 });
+
+const LEAD_FORM_KEYS = ["name", "company", "contact", "note", "source"] as const;
+const LEAD_UPDATE_FORM_KEYS = [...LEAD_FORM_KEYS, "status"] as const;
 
 export type LeadFilters = {
   q?: string;
@@ -125,13 +129,7 @@ export type LeadActionResult =
 export async function createLead(
   formData: FormData,
 ): Promise<LeadActionResult> {
-  const parsed = leadInputSchema.safeParse({
-    name: formData.get("name"),
-    company: formData.get("company") || undefined,
-    contact: formData.get("contact") || undefined,
-    note: formData.get("note") || undefined,
-    source: formData.get("source"),
-  });
+  const parsed = leadInputSchema.safeParse(formValues(formData, LEAD_FORM_KEYS));
 
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0].message };
@@ -151,14 +149,9 @@ export async function updateLead(
   id: string,
   formData: FormData,
 ): Promise<LeadActionResult> {
-  const parsed = leadUpdateSchema.safeParse({
-    name: formData.get("name"),
-    company: formData.get("company") || undefined,
-    contact: formData.get("contact") || undefined,
-    note: formData.get("note") || undefined,
-    source: formData.get("source"),
-    status: formData.get("status"),
-  });
+  const parsed = leadUpdateSchema.safeParse(
+    formValues(formData, LEAD_UPDATE_FORM_KEYS),
+  );
 
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0].message };

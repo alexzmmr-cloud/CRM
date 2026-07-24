@@ -6,9 +6,11 @@ import {
   OPPORTUNITY_STAGES,
   OPPORTUNITY_STAGE_META,
   OPEN_OPPORTUNITY_STAGES,
+  NO_OPEN_TASK_WHERE,
   isOpportunityStatus,
   type OpportunityStatus,
 } from "@/lib/opportunity";
+import { formValues } from "@/lib/form";
 import { revalidatePath } from "next/cache";
 
 const opportunityInputSchema = z.object({
@@ -33,6 +35,21 @@ const opportunityUpdateSchema = opportunityInputSchema.extend({
   lostReason: z.string().trim().optional(),
 });
 
+const OPPORTUNITY_FORM_KEYS = [
+  "title",
+  "amount",
+  "venue",
+  "timeline",
+  "format",
+  "accountId",
+  "contactId",
+] as const;
+const OPPORTUNITY_UPDATE_FORM_KEYS = [
+  ...OPPORTUNITY_FORM_KEYS,
+  "stage",
+  "lostReason",
+] as const;
+
 export type OpportunityFilters = {
   q?: string;
   stage?: string;
@@ -49,7 +66,7 @@ function statusWhereClause(status?: string) {
     case "open":
       return { stage: { in: OPEN_OPPORTUNITY_STAGES } };
     case "stuck":
-      return { activities: { none: { type: "task", done: false } } };
+      return NO_OPEN_TASK_WHERE;
   }
 }
 
@@ -109,15 +126,9 @@ function serializeOpportunity(
 export async function createOpportunity(
   formData: FormData,
 ): Promise<OpportunityActionResult> {
-  const parsed = opportunityInputSchema.safeParse({
-    title: formData.get("title"),
-    amount: formData.get("amount") || undefined,
-    venue: formData.get("venue") || undefined,
-    timeline: formData.get("timeline") || undefined,
-    format: formData.get("format") || undefined,
-    accountId: formData.get("accountId") || undefined,
-    contactId: formData.get("contactId") || undefined,
-  });
+  const parsed = opportunityInputSchema.safeParse(
+    formValues(formData, OPPORTUNITY_FORM_KEYS),
+  );
 
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0].message };
@@ -136,21 +147,74 @@ export async function createOpportunity(
   }
 }
 
+type StageTransitionCheck =
+  | { ok: true; closedAt: Date | null | undefined }
+  | { ok: false; error: string };
+
+function checkStageTransition(
+  currentStage: string,
+  nextStage: (typeof OPPORTUNITY_STAGES)[number],
+  {
+    amount,
+    contactId,
+    lostReason,
+  }: { amount: number | null | undefined; contactId: string | null | undefined; lostReason?: string },
+): StageTransitionCheck {
+  const isEnteringStage = currentStage !== nextStage;
+  if (!isEnteringStage) {
+    return { ok: true, closedAt: undefined };
+  }
+
+  if (nextStage === "won" && ((amount ?? undefined) === undefined || !contactId)) {
+    return {
+      ok: false,
+      error:
+        "Для перехода в «Выиграна» нужно заполнить бюджет и указать контакт",
+    };
+  }
+
+  if (nextStage === "lost" && !lostReason?.trim()) {
+    return {
+      ok: false,
+      error: "Для перехода в «Проиграна» укажите причину расторжения",
+    };
+  }
+
+  const meta = OPPORTUNITY_STAGE_META[nextStage];
+  return { ok: true, closedAt: meta.isWon || meta.isLost ? new Date() : null };
+}
+
+async function applyStageTransition(
+  tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
+  id: string,
+  data: Record<string, unknown>,
+  closedAt: Date | null | undefined,
+  isEnteringLost: boolean,
+  trimmedReason?: string,
+) {
+  const updated = await tx.opportunity.update({
+    where: { id },
+    data: closedAt !== undefined ? { ...data, closedAt } : data,
+  });
+  if (isEnteringLost && trimmedReason) {
+    await tx.activity.create({
+      data: {
+        type: "note",
+        content: `Причина расторжения: ${trimmedReason}`,
+        opportunityId: id,
+      },
+    });
+  }
+  return updated;
+}
+
 export async function updateOpportunity(
   id: string,
   formData: FormData,
 ): Promise<OpportunityActionResult> {
-  const parsed = opportunityUpdateSchema.safeParse({
-    title: formData.get("title"),
-    amount: formData.get("amount") || undefined,
-    venue: formData.get("venue") || undefined,
-    timeline: formData.get("timeline") || undefined,
-    format: formData.get("format") || undefined,
-    accountId: formData.get("accountId") || undefined,
-    contactId: formData.get("contactId") || undefined,
-    stage: formData.get("stage"),
-    lostReason: formData.get("lostReason") || undefined,
-  });
+  const parsed = opportunityUpdateSchema.safeParse(
+    formValues(formData, OPPORTUNITY_UPDATE_FORM_KEYS),
+  );
 
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0].message };
@@ -162,51 +226,27 @@ export async function updateOpportunity(
   if (!current) {
     return { ok: false, error: "Сделка не найдена" };
   }
-  const isEnteringStage = current.stage !== data.stage;
 
-  if (
-    isEnteringStage &&
-    data.stage === "won" &&
-    (data.amount === undefined || !data.contactId)
-  ) {
-    return {
-      ok: false,
-      error:
-        "Для перехода в «Выиграна» нужно заполнить бюджет и указать контакт",
-    };
+  const check = checkStageTransition(current.stage, data.stage, {
+    amount: data.amount,
+    contactId: data.contactId,
+    lostReason,
+  });
+  if (!check.ok) {
+    return { ok: false, error: check.error };
   }
-
-  const trimmedReason = lostReason?.trim();
-  if (isEnteringStage && data.stage === "lost" && !trimmedReason) {
-    return {
-      ok: false,
-      error: "Для перехода в «Проиграна» укажите причину расторжения",
-    };
-  }
-
-  const closedAt = isEnteringStage
-    ? OPPORTUNITY_STAGE_META[data.stage].isWon || OPPORTUNITY_STAGE_META[data.stage].isLost
-      ? new Date()
-      : null
-    : undefined;
 
   try {
-    const opportunity = await prisma.$transaction(async (tx) => {
-      const updated = await tx.opportunity.update({
-        where: { id },
-        data: closedAt !== undefined ? { ...data, closedAt } : data,
-      });
-      if (isEnteringStage && data.stage === "lost" && trimmedReason) {
-        await tx.activity.create({
-          data: {
-            type: "note",
-            content: `Причина расторжения: ${trimmedReason}`,
-            opportunityId: id,
-          },
-        });
-      }
-      return updated;
-    });
+    const opportunity = await prisma.$transaction((tx) =>
+      applyStageTransition(
+        tx,
+        id,
+        data,
+        check.closedAt,
+        current.stage !== data.stage && data.stage === "lost",
+        lostReason?.trim(),
+      ),
+    );
     revalidatePath("/opportunities");
     revalidatePath(`/opportunities/${opportunity.id}`);
     return { ok: true, opportunity: serializeOpportunity(opportunity) };
@@ -218,65 +258,44 @@ export async function updateOpportunity(
   }
 }
 
+const stageOnlySchema = z.enum(OPPORTUNITY_STAGES);
+
 export async function updateOpportunityStage(
   id: string,
   stage: string,
   lostReason?: string,
 ) {
-  if (!OPPORTUNITY_STAGES.includes(stage as (typeof OPPORTUNITY_STAGES)[number])) {
+  const parsedStage = stageOnlySchema.safeParse(stage);
+  if (!parsedStage.success) {
     return { ok: false as const, error: "Недопустимая стадия сделки" };
   }
+  const typedStage = parsedStage.data;
 
   const current = await prisma.opportunity.findUnique({ where: { id } });
   if (!current) {
     return { ok: false as const, error: "Сделка не найдена" };
   }
-  const isEnteringStage = current.stage !== stage;
 
-  if (
-    isEnteringStage &&
-    stage === "won" &&
-    (current.amount === null || !current.contactId)
-  ) {
-    return {
-      ok: false as const,
-      error:
-        "Для перехода в «Выиграна» нужно заполнить бюджет и указать контакт",
-    };
+  const check = checkStageTransition(current.stage, typedStage, {
+    amount: current.amount === null ? null : Number(current.amount),
+    contactId: current.contactId,
+    lostReason,
+  });
+  if (!check.ok) {
+    return { ok: false as const, error: check.error };
   }
-
-  const trimmedReason = lostReason?.trim();
-  if (isEnteringStage && stage === "lost" && !trimmedReason) {
-    return {
-      ok: false as const,
-      error: "Для перехода в «Проиграна» укажите причину расторжения",
-    };
-  }
-
-  const typedStage = stage as (typeof OPPORTUNITY_STAGES)[number];
-  const closedAt = isEnteringStage
-    ? OPPORTUNITY_STAGE_META[typedStage].isWon || OPPORTUNITY_STAGE_META[typedStage].isLost
-      ? new Date()
-      : null
-    : undefined;
 
   try {
-    const opportunity = await prisma.$transaction(async (tx) => {
-      const updated = await tx.opportunity.update({
-        where: { id },
-        data: closedAt !== undefined ? { stage, closedAt } : { stage },
-      });
-      if (isEnteringStage && stage === "lost" && trimmedReason) {
-        await tx.activity.create({
-          data: {
-            type: "note",
-            content: `Причина расторжения: ${trimmedReason}`,
-            opportunityId: id,
-          },
-        });
-      }
-      return updated;
-    });
+    const opportunity = await prisma.$transaction((tx) =>
+      applyStageTransition(
+        tx,
+        id,
+        { stage: typedStage },
+        check.closedAt,
+        current.stage !== typedStage && typedStage === "lost",
+        lostReason?.trim(),
+      ),
+    );
     revalidatePath("/opportunities");
     revalidatePath(`/opportunities/${opportunity.id}`);
     return { ok: true as const, opportunity: serializeOpportunity(opportunity) };

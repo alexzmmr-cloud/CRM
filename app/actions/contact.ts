@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { formValues } from "@/lib/form";
 import { revalidatePath } from "next/cache";
 
 const contactInputSchema = z.object({
@@ -11,6 +12,8 @@ const contactInputSchema = z.object({
   role: z.string().trim().optional(),
   accountId: z.string().trim().optional(),
 });
+
+const CONTACT_FORM_KEYS = ["name", "email", "phone", "role", "accountId"] as const;
 
 export type ContactFilters = {
   q?: string;
@@ -39,13 +42,9 @@ export type ContactActionResult =
 export async function createContact(
   formData: FormData,
 ): Promise<ContactActionResult> {
-  const parsed = contactInputSchema.safeParse({
-    name: formData.get("name"),
-    email: formData.get("email") || undefined,
-    phone: formData.get("phone") || undefined,
-    role: formData.get("role") || undefined,
-    accountId: formData.get("accountId") || undefined,
-  });
+  const parsed = contactInputSchema.safeParse(
+    formValues(formData, CONTACT_FORM_KEYS),
+  );
 
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0].message };
@@ -68,13 +67,9 @@ export async function updateContact(
   id: string,
   formData: FormData,
 ): Promise<ContactActionResult> {
-  const parsed = contactInputSchema.safeParse({
-    name: formData.get("name"),
-    email: formData.get("email") || undefined,
-    phone: formData.get("phone") || undefined,
-    role: formData.get("role") || undefined,
-    accountId: formData.get("accountId") || undefined,
-  });
+  const parsed = contactInputSchema.safeParse(
+    formValues(formData, CONTACT_FORM_KEYS),
+  );
 
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0].message };

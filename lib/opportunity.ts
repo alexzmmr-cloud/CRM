@@ -78,6 +78,14 @@ export const OPEN_OPPORTUNITY_STAGES: OpportunityStage[] =
       !OPPORTUNITY_STAGE_META[stage].isLost,
   );
 
+/**
+ * Prisma where-фрагмент для "нет ни одной незавершённой задачи" —
+ * общее условие и статуса "Зависшая", и подсчёта/списка Stuck Deals на Dashboard.
+ */
+export const NO_OPEN_TASK_WHERE = {
+  activities: { none: { type: "task", done: false } },
+} as const;
+
 export const OPPORTUNITY_STATUSES = ["open", "won", "lost", "stuck"] as const;
 
 export type OpportunityStatus = (typeof OPPORTUNITY_STATUSES)[number];

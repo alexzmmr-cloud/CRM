@@ -1,5 +1,9 @@
 import { prisma } from "@/lib/prisma";
-import { OPEN_OPPORTUNITY_STAGES, OPPORTUNITY_STAGES } from "@/lib/opportunity";
+import {
+  OPEN_OPPORTUNITY_STAGES,
+  OPPORTUNITY_STAGES,
+  NO_OPEN_TASK_WHERE,
+} from "@/lib/opportunity";
 import { LEAD_SOURCES, LEAD_STATUSES } from "@/lib/lead";
 
 export async function getDashboardKpis() {
@@ -19,11 +23,7 @@ export async function getDashboardKpis() {
     prisma.activity.count({
       where: { type: "task", done: false, dueDate: { lt: new Date() } },
     }),
-    prisma.opportunity.count({
-      where: {
-        activities: { none: { type: "task", done: false } },
-      },
-    }),
+    prisma.opportunity.count({ where: NO_OPEN_TASK_WHERE }),
     prisma.lead.groupBy({ by: ["status"], _count: { _all: true } }),
     prisma.lead.groupBy({ by: ["source"], _count: { _all: true } }),
   ]);
@@ -90,9 +90,7 @@ export async function getOverdueTasks(limit = 5) {
 
 export async function getStuckDeals(limit = 5) {
   return prisma.opportunity.findMany({
-    where: {
-      activities: { none: { type: "task", done: false } },
-    },
+    where: NO_OPEN_TASK_WHERE,
     orderBy: { updatedAt: "asc" },
     take: limit,
     include: { account: true },

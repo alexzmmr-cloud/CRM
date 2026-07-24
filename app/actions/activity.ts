@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { formValues } from "@/lib/form";
 import { revalidatePath } from "next/cache";
 
 const noteInputSchema = z.object({
@@ -15,6 +16,9 @@ const taskInputSchema = z.object({
   dueDate: z.string().trim().min(1, "Укажите срок задачи"),
 });
 
+const NOTE_FORM_KEYS = ["opportunityId", "content"] as const;
+const TASK_FORM_KEYS = [...NOTE_FORM_KEYS, "dueDate"] as const;
+
 export type ActivityActionResult =
   | { ok: true; activity: Awaited<ReturnType<typeof prisma.activity.create>> }
   | { ok: false; error: string };
@@ -22,10 +26,7 @@ export type ActivityActionResult =
 export async function addNote(
   formData: FormData,
 ): Promise<ActivityActionResult> {
-  const parsed = noteInputSchema.safeParse({
-    opportunityId: formData.get("opportunityId"),
-    content: formData.get("content"),
-  });
+  const parsed = noteInputSchema.safeParse(formValues(formData, NOTE_FORM_KEYS));
 
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0].message };
@@ -53,11 +54,7 @@ export async function addNote(
 export async function addTask(
   formData: FormData,
 ): Promise<ActivityActionResult> {
-  const parsed = taskInputSchema.safeParse({
-    opportunityId: formData.get("opportunityId"),
-    content: formData.get("content"),
-    dueDate: formData.get("dueDate"),
-  });
+  const parsed = taskInputSchema.safeParse(formValues(formData, TASK_FORM_KEYS));
 
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0].message };
