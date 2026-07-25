@@ -70,15 +70,16 @@ export default async function DashboardPage() {
           </span>
           <span className="kpi-label">Сумма открытых сделок</span>
         </div>
-        <div
-          className={`card kpi-card${kpis.overdueTasksCount > 0 ? " is-warning" : ""}`}
+        <a
+          href="#overdue-tasks"
+          className={`card kpi-card kpi-card-link${kpis.overdueTasksCount > 0 ? " is-warning" : ""}`}
         >
           <span className="kpi-value">{kpis.overdueTasksCount}</span>
           <span className="kpi-label">Просроченных задач</span>
           {kpis.overdueTasksCount > 0 && (
-            <span className="kpi-sub">Требуют внимания</span>
+            <span className="kpi-sub">Список ниже на странице ↓</span>
           )}
-        </div>
+        </a>
         <Link
           href="/opportunities?status=stuck"
           className={`card kpi-card kpi-card-link${kpis.stuckDealsCount > 0 ? " is-warning" : ""}`}
@@ -153,7 +154,7 @@ export default async function DashboardPage() {
             </ul>
           )}
         </section>
-        <section className="card">
+        <section id="overdue-tasks" className="card">
           <h2 className="card-title">Просроченные задачи</h2>
           {overdueTasks.length === 0 ? (
             <p className="muted">Просроченных задач нет.</p>

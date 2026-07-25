@@ -75,7 +75,14 @@ export async function getOpportunities(filters: OpportunityFilters = {}) {
   return prisma.opportunity.findMany({
     where: {
       AND: [
-        q ? { title: { contains: q, mode: "insensitive" } } : {},
+        q
+          ? {
+              OR: [
+                { title: { contains: q, mode: "insensitive" } },
+                { account: { name: { contains: q, mode: "insensitive" } } },
+              ],
+            }
+          : {},
         stage ? { stage } : {},
         statusWhereClause(status),
       ],
