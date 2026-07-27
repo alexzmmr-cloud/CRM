@@ -37,6 +37,7 @@ export async function getLeads(filters: LeadFilters = {}) {
               OR: [
                 { name: { contains: q, mode: "insensitive" } },
                 { company: { contains: q, mode: "insensitive" } },
+                { contact: { contains: q, mode: "insensitive" } },
               ],
             }
           : {},

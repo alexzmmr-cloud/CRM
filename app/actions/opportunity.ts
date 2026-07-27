@@ -80,6 +80,7 @@ export async function getOpportunities(filters: OpportunityFilters = {}) {
               OR: [
                 { title: { contains: q, mode: "insensitive" } },
                 { account: { name: { contains: q, mode: "insensitive" } } },
+                { contact: { name: { contains: q, mode: "insensitive" } } },
               ],
             }
           : {},

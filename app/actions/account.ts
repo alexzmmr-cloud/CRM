@@ -21,7 +21,17 @@ export type AccountFilters = {
 export async function getAccounts(filters: AccountFilters = {}) {
   const { q } = filters;
   return prisma.account.findMany({
-    where: q ? { name: { contains: q, mode: "insensitive" } } : {},
+    where: q
+      ? {
+          OR: [
+            { name: { contains: q, mode: "insensitive" } },
+            { industry: { contains: q, mode: "insensitive" } },
+            { phone: { contains: q, mode: "insensitive" } },
+            { website: { contains: q, mode: "insensitive" } },
+            { contacts: { some: { name: { contains: q, mode: "insensitive" } } } },
+          ],
+        }
+      : {},
     orderBy: { createdAt: "desc" },
     include: { contacts: true, opportunities: true },
   });

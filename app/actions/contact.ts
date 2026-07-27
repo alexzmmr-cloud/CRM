@@ -22,7 +22,16 @@ export type ContactFilters = {
 export async function getContacts(filters: ContactFilters = {}) {
   const { q } = filters;
   return prisma.contact.findMany({
-    where: q ? { name: { contains: q, mode: "insensitive" } } : {},
+    where: q
+      ? {
+          OR: [
+            { name: { contains: q, mode: "insensitive" } },
+            { email: { contains: q, mode: "insensitive" } },
+            { phone: { contains: q, mode: "insensitive" } },
+            { account: { name: { contains: q, mode: "insensitive" } } },
+          ],
+        }
+      : {},
     orderBy: { createdAt: "desc" },
     include: { account: true },
   });
